@@ -68,7 +68,7 @@ The LaunchAgent starts the app at login. The installer also removes the earlier 
 
 `tools/build-limit-rings-pkg.sh` creates a macOS installer package at `dist/CodexPetLimitRings-<version>.pkg`. The package installs `CodexPetLimitRings.app` into `/Applications`, writes a per-user LaunchAgent for the active console user, and starts the menu-bar companion.
 
-`tools/package-limit-rings-dmg.sh` creates a compressed macOS DMG at `dist/CodexPetLimitRings-<version>.dmg`. The image contains `Install Codex Pet Limit Rings.pkg` for installer-based setup, plus `CodexPetLimitRings.app`, an `Applications` shortcut, and a README as a manual fallback.
+`tools/package-limit-rings-dmg.sh` creates a compressed macOS DMG at `dist/CodexPetLimitRings-<version>.dmg`. The image contains `Install Codex Pet Limit Rings.pkg` for installer-based setup, plus `CodexPetLimitRings.app`, a Finder-style `Applications` alias, and a README as a manual fallback.
 
 `tools/uninstall-limit-rings.sh` unloads the LaunchAgent, removes the app bundle, clears the saved ring visibility preference, and also cleans up those earlier prototype names.
 

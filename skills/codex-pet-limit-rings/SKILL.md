@@ -49,7 +49,7 @@ Install this skill into local Codex:
 tools/install-codex-skill.sh
 ```
 
-Build a shareable macOS installer package and DMG:
+Build a shareable macOS installer package and DMG (DMG should include a Finder-style `Applications` alias for drag-install):
 
 ```bash
 tools/build-limit-rings-pkg.sh

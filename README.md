@@ -48,7 +48,7 @@ Build a shareable macOS DMG:
 tools/package-limit-rings-dmg.sh
 ```
 
-The DMG contains an installer package, `CodexPetLimitRings.app`, an `Applications` shortcut, and a short install README. Double-click `Install Codex Pet Limit Rings.pkg` inside the DMG to copy the app to `/Applications` and start the menu-bar companion for the current user.
+The DMG contains an installer package, `CodexPetLimitRings.app`, a Finder-style `Applications` alias, and a short install README. Double-click `Install Codex Pet Limit Rings.pkg` inside the DMG to copy the app to `/Applications` and start the menu-bar companion for the current user.
 
 You should see a small rings icon in the macOS menu bar. Use that menu to toggle `Show Rings`, refresh the latest usage data, reset the locked position, or quit.
 

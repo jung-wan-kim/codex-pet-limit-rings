@@ -20,7 +20,19 @@ mkdir -p "$STAGE" "$DIST_DIR"
 "$ROOT/tools/build-limit-rings-pkg.sh" "$PKG" >/dev/null
 cp "$PKG" "$STAGE/$PKG_NAME"
 cp -R "$APP" "$STAGE/$APP_NAME"
-ln -s /Applications "$STAGE/Applications"
+
+rm -f "$STAGE/Applications"
+if command -v osascript >/dev/null 2>&1; then
+  osascript <<APPLESCRIPT >/dev/null 2>&1 || ln -s /Applications "$STAGE/Applications"
+tell application "Finder"
+  make alias file to POSIX file "/Applications" at POSIX file "$STAGE"
+  set name of result to "Applications"
+end tell
+APPLESCRIPT
+else
+  ln -s /Applications "$STAGE/Applications"
+fi
+
 cat > "$STAGE/README.txt" <<README
 Codex Pet Limit Rings
 
