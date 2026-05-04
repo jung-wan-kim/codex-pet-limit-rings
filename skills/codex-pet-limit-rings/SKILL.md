@@ -49,6 +49,12 @@ Install this skill into local Codex:
 tools/install-codex-skill.sh
 ```
 
+Build a shareable macOS DMG:
+
+```bash
+tools/package-limit-rings-dmg.sh
+```
+
 Verify the live app:
 
 ```bash
@@ -71,13 +77,15 @@ The outer ring is the short-window usage percentage. The inner ring is the weekl
 When changing behavior or visuals:
 
 1. Edit `tools/codex-pet-limit-rings.swift`.
-2. Keep packaging scripts in `tools/` and update `docs/limit-rings.md` when the user-facing contract changes.
+2. Keep packaging scripts in `tools/`, keep the app icon generation in `tools/generate-app-icon.swift`, and update `docs/limit-rings.md` when the user-facing contract changes.
 3. Run:
 
 ```bash
 bash -n tools/*.sh
 swiftc tools/codex-pet-limit-rings.swift -o tmp/codex-pet-limit-rings -framework AppKit -lsqlite3
 tmp/codex-pet-limit-rings --preview tmp/limit-rings-preview.png --size 164
+tools/build-limit-rings.sh tmp/CodexPetLimitRings.app
+tools/package-limit-rings-dmg.sh
 ```
 
 4. Relaunch with `tools/run-limit-rings.sh` for development or `tools/install-limit-rings.sh` for the packaged login-item flow.

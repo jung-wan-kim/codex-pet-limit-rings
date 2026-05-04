@@ -42,6 +42,14 @@ Install the rings as a login item:
 tools/install-limit-rings.sh
 ```
 
+Build a shareable macOS DMG:
+
+```bash
+tools/package-limit-rings-dmg.sh
+```
+
+The DMG contains `CodexPetLimitRings.app`, an `Applications` shortcut, and a short install README.
+
 You should see a small rings icon in the macOS menu bar. Use that menu to toggle `Show Rings`, refresh the latest usage data, reset the locked position, or quit.
 
 Then use any Codex pet normally. No pet setup step is required.
@@ -98,7 +106,9 @@ tools/
   install-limit-rings.sh           build, install, and start at login
   uninstall-limit-rings.sh         remove the app and login item
   run-limit-rings.sh               development launch
-  build-limit-rings.sh             app bundle builder
+  build-limit-rings.sh             app bundle builder with app icon
+  package-limit-rings-dmg.sh       create dist/CodexPetLimitRings-<version>.dmg
+  generate-app-icon.swift          generate the app .icns logo
   install-codex-skill.sh           copy the bundled skill into ~/.codex/skills
 
 skills/codex-pet-limit-rings/
@@ -117,6 +127,12 @@ Build the app:
 
 ```bash
 tools/build-limit-rings.sh
+```
+
+Build the DMG installer image:
+
+```bash
+tools/package-limit-rings-dmg.sh
 ```
 
 Render a static preview PNG:

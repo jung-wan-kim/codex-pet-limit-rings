@@ -7,6 +7,8 @@
   <string>CodexPetLimitRings</string>
   <key>CFBundleIdentifier</key>
   <string>local.codex.pet-limit-rings</string>
+  <key>CFBundleIconFile</key>
+  <string>CodexPetLimitRings</string>
   <key>CFBundleName</key>
   <string>Codex Pet Limit Rings</string>
   <key>CFBundlePackageType</key>

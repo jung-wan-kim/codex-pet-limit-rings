@@ -45,6 +45,8 @@ No OpenAI API key is required. The menu summary says `Live` when the direct usag
 
 ## Install Contract
 
+`tools/build-limit-rings.sh` creates an app bundle with a generated `CodexPetLimitRings.icns` application logo.
+
 `tools/install-limit-rings.sh` builds:
 
 ```text
@@ -64,6 +66,8 @@ The LaunchAgent starts the app at login. The installer also removes the earlier 
 ~/Library/LaunchAgents/com.codex-pet.limit-aura.plist
 ```
 
+`tools/package-limit-rings-dmg.sh` creates a compressed macOS DMG at `dist/CodexPetLimitRings-<version>.dmg`. The image contains `CodexPetLimitRings.app`, an `Applications` shortcut, and a README for drag-install usage.
+
 `tools/uninstall-limit-rings.sh` unloads the LaunchAgent, removes the app bundle, clears the saved ring visibility preference, and also cleans up those earlier prototype names.
 
 ## Development
@@ -72,6 +76,12 @@ Build and run the app from the repository:
 
 ```bash
 tools/run-limit-rings.sh
+```
+
+Build a shareable DMG:
+
+```bash
+tools/package-limit-rings-dmg.sh
 ```
 
 Render a static preview:
