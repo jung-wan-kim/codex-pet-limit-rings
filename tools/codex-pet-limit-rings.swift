@@ -461,7 +461,7 @@ struct LimitRingRenderer {
         bounds: CGRect
     ) -> LimitReadout {
         let inset: CGFloat = 4.0
-        let labelGap: CGFloat = 1.0
+        let labelGap: CGFloat = -1.0
         let labelHeight = max(16.0, min(18.5, bounds.height * 0.13))
         let labelWidth = min(bounds.width - inset * 2.0, max(48.0, CGFloat(text.count) * 5.9 + 14.0))
         let labelY: CGFloat
@@ -1134,7 +1134,7 @@ final class LimitRingsApp: NSObject {
         guard ringsVisible, currentPetFrameAppKit != nil, ringView.showsReadout else { return false }
         let frame = panel.frame
         let inset: CGFloat = 4.0
-        let labelGap: CGFloat = 1.0
+        let labelGap: CGFloat = -1.0
         let labelHeight = max(16.0, min(18.5, frame.height * 0.13))
         let stackHeight = labelHeight * 2.0 + labelGap
         let stackWidth = min(frame.width - inset * 2.0, max(70.0, frame.width * 0.66))
