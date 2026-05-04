@@ -16,7 +16,40 @@ Download the latest macOS installer package:
 
 The `.pkg` installs `CodexPetLimitRings.app` into `/Applications`, writes the per-user LaunchAgent, and starts the menu-bar companion.
 
-> **macOS Gatekeeper note:** the public package is currently unsigned because this repo does not have a Developer ID Installer certificate. If macOS says Apple cannot verify the package, install only if you trust this repo: either right-click/control-click the package and choose **Open**, approve it in **System Settings → Privacy & Security → Open Anyway**, or run `sudo installer -pkg ~/Downloads/CodexPetLimitRings-0.4.0.pkg -target /`. Future signed builds can be produced by setting `CODEX_PET_LIMIT_RINGS_PKG_SIGN_IDENTITY` and `CODEX_PET_LIMIT_RINGS_NOTARY_PROFILE`.
+### If macOS says “Not Opened”
+
+The current public `.pkg` is intentionally source-built but **not Apple Developer ID signed or notarized**. Because of that, macOS Gatekeeper can show:
+
+```text
+Apple could not verify “CodexPetLimitRings-0.4.0.pkg” is free of malware.
+```
+
+This warning means macOS cannot verify an Apple Developer ID signature. It does **not** mean the package changed the Codex app bundle; this companion app still installs separately into `/Applications`.
+
+Install only if you trust this repository. Safe options are:
+
+```bash
+sudo installer -pkg ~/Downloads/CodexPetLimitRings-0.4.0.pkg -target /
+```
+
+If the downloaded file is quarantined, remove only that download’s quarantine flag first:
+
+```bash
+xattr -d com.apple.quarantine ~/Downloads/CodexPetLimitRings-0.4.0.pkg
+sudo installer -pkg ~/Downloads/CodexPetLimitRings-0.4.0.pkg -target /
+```
+
+You can also approve it from **System Settings → Privacy & Security → Open Anyway** after the first blocked open attempt.
+
+For a warning-free public package, build with a real Apple **Developer ID Installer** certificate and notarization profile:
+
+```bash
+CODEX_PET_LIMIT_RINGS_PKG_SIGN_IDENTITY="Developer ID Installer: Your Name (TEAMID)" \
+CODEX_PET_LIMIT_RINGS_NOTARY_PROFILE="your-notarytool-profile" \
+tools/build-limit-rings-pkg.sh
+```
+
+The build script will sign, submit for notarization, and staple the ticket when those environment variables are present.
 
 ## What’s New in 0.4.0
 
