@@ -18,7 +18,7 @@ The rings are designed to be glanceable:
 - The overlay is intentionally compact, rendering at 70% of the original companion-ring footprint.
 - The center always shows the short-window usage percentage in large text, with the weekly usage percentage below it in smaller text.
 - Color moves from calm green/blue to amber and red as usage gets high.
-- Hovering over the pet or rings shows the exact usage percentages at the current ring endpoints.
+- Hovering over the pet or rings shows how long remains until each limit resets at the current ring endpoints.
 - Dragging the pet/rings locks the rings at the new position so they do not snap back to stale Codex coordinates.
 - A small menu-bar icon lets you hide the rings, refresh data, reset the locked ring position, or quit.
 

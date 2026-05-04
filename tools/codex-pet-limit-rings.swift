@@ -476,7 +476,7 @@ struct LimitRingRenderer {
         var readouts: [LimitReadout] = []
         if let primary = state.primary {
             readouts.append(makeReadout(
-                text: formatPercent(primary.usedPercent),
+                text: formatResetCountdown(primary),
                 center: center,
                 ringRadius: outerRadius,
                 labelRadius: outerRadius + 22.0,
@@ -488,7 +488,7 @@ struct LimitRingRenderer {
 
         if let secondary = state.secondary {
             readouts.append(makeReadout(
-                text: formatPercent(secondary.usedPercent),
+                text: formatResetCountdown(secondary),
                 center: center,
                 ringRadius: innerRadius,
                 labelRadius: innerRadius + 21.0,
@@ -515,7 +515,7 @@ struct LimitRingRenderer {
         let angle = ringUsageStartAngle - CGFloat(max(usagePercent, 1.8) / 100.0) * CGFloat.pi * 2.0
         let ringPoint = point(center: center, radius: ringRadius, angle: angle)
         let labelPoint = point(center: center, radius: labelRadius, angle: angle)
-        let labelSize = CGSize(width: text.count > 3 ? 45 : 38, height: 22)
+        let labelSize = CGSize(width: max(38.0, min(76.0, CGFloat(text.count) * 7.2 + 16.0)), height: 22)
         var labelRect = CGRect(
             x: labelPoint.x - labelSize.width / 2,
             y: labelPoint.y - labelSize.height / 2,
@@ -524,6 +524,33 @@ struct LimitRingRenderer {
         )
         labelRect = clamp(labelRect, inside: bounds)
         return LimitReadout(text: text, ringPoint: ringPoint, labelRect: labelRect, color: color, angle: angle)
+    }
+
+    private func formatResetCountdown(_ bucket: LimitBucket) -> String {
+        guard let resetAt = bucket.resetAt else {
+            return bucket.windowMinutes.map { "~\(formatDuration($0 * 60.0))" } ?? "reset ?"
+        }
+
+        return formatDuration(resetAt - Date().timeIntervalSince1970)
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let remaining = max(0, Int(seconds.rounded(.up)))
+        if remaining == 0 {
+            return "now"
+        }
+
+        let days = remaining / 86_400
+        let hours = (remaining % 86_400) / 3_600
+        let minutes = (remaining % 3_600) / 60
+
+        if days > 0 {
+            return hours > 0 ? "\(days)d \(hours)h" : "\(days)d"
+        }
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(max(1, minutes))m"
     }
 
     private func resolveReadoutOverlaps(_ readouts: [LimitReadout], bounds: CGRect) -> [LimitReadout] {
