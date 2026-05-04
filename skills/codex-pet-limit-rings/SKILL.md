@@ -64,7 +64,7 @@ The rings read:
 - `~/.codex/.codex-global-state.json` for `electron-avatar-overlay-open` and `electron-avatar-overlay-bounds.mascot`.
 - `~/.codex/logs_2.sqlite` for fallback to the newest `codex.rate_limits` event when live usage fails.
 
-The outer ring is the short-window remaining percentage. The inner ring is the weekly remaining percentage. The menu summary should say `Live` when direct usage succeeds and `Cached` when the local log fallback is active.
+The outer ring is the short-window usage percentage. The inner ring is the weekly usage percentage. The menu summary should say `Live` when direct usage succeeds and `Cached` when the local log fallback is active.
 
 ## Editing Workflow
 

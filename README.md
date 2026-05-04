@@ -12,12 +12,12 @@ It works with whatever Codex pet you like. Built-in pet, custom pet, tiny dog, r
 
 The rings are designed to be glanceable:
 
-- The outer ring shows the short-window limit remaining.
-- The inner ring shows the weekly limit remaining.
+- The outer ring fills by short-window usage percentage.
+- The inner ring fills by weekly usage percentage.
 - The overlay is intentionally compact, rendering at 70% of the original companion-ring footprint.
 - The center always shows the short-window usage percentage in large text, with the weekly usage percentage below it in smaller text.
-- Color moves from calm green/blue to amber and red as capacity gets low.
-- Hovering over the pet or rings shows the exact percentages at the current ring endpoints.
+- Color moves from calm green/blue to amber and red as usage gets high.
+- Hovering over the pet or rings shows the exact usage percentages at the current ring endpoints.
 - Dragging the pet/rings locks the rings at the new position so they do not snap back to stale Codex coordinates.
 - A small menu-bar icon lets you hide the rings, refresh data, reset the locked ring position, or quit.
 
@@ -39,7 +39,7 @@ Install the rings as a login item:
 tools/install-limit-rings.sh
 ```
 
-You should see a small rings icon in the macOS menu bar. Use that menu to toggle `Show Rings`, refresh the latest usage data, or quit.
+You should see a small rings icon in the macOS menu bar. Use that menu to toggle `Show Rings`, refresh the latest usage data, reset the locked position, or quit.
 
 Then use any Codex pet normally. No pet setup step is required.
 

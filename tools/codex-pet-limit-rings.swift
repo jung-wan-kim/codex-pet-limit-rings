@@ -327,8 +327,8 @@ struct LimitRingRenderer {
                 radius: outerRadius,
                 lineWidth: 7.0,
                 bucket: primary,
-                color: color(forRemaining: primary.remainingPercent, role: .primary),
-                trackAlpha: 0.20,
+                color: color(forUsage: primary.usedPercent, role: .primary),
+                trackAlpha: 0.16,
                 phase: phase
             )
         } else {
@@ -342,8 +342,8 @@ struct LimitRingRenderer {
                 radius: innerRadius,
                 lineWidth: 4.5,
                 bucket: secondary,
-                color: color(forRemaining: secondary.remainingPercent, role: .secondary),
-                trackAlpha: 0.14,
+                color: color(forUsage: secondary.usedPercent, role: .secondary),
+                trackAlpha: 0.12,
                 phase: phase + 0.18
             )
         }
@@ -371,15 +371,15 @@ struct LimitRingRenderer {
 
     private func urgency(for bucket: LimitBucket?) -> Double {
         guard let bucket else { return 0.0 }
-        return min(max((45.0 - bucket.remainingPercent) / 45.0, 0.0), 1.0)
+        return min(max((bucket.usedPercent - 55.0) / 45.0, 0.0), 1.0)
     }
 
     private func drawHalo(_ context: CGContext, center: CGPoint, radius: CGFloat, urgency: CGFloat, breathe: CGFloat) {
         context.saveGState()
-        let color = NSColor(calibratedRed: 0.23 + urgency * 0.55, green: 0.85 - urgency * 0.30, blue: 0.78 - urgency * 0.48, alpha: 0.22 + urgency * 0.16)
+        let color = NSColor(calibratedRed: 0.14 + urgency * 0.82, green: 0.82 - urgency * 0.42, blue: 0.95 - urgency * 0.68, alpha: 0.20 + urgency * 0.18)
         context.setLineCap(.round)
         context.setShadow(offset: .zero, blur: 14.0 + urgency * breathe * 5.0, color: color.withAlphaComponent(0.55).cgColor)
-        context.setStrokeColor(color.withAlphaComponent(0.20).cgColor)
+        context.setStrokeColor(color.withAlphaComponent(0.18).cgColor)
         context.setLineWidth(8.0)
         context.addArc(center: center, radius: radius + 3.0, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
         context.strokePath()
@@ -419,13 +419,14 @@ struct LimitRingRenderer {
         phase: Double
     ) {
         let start = -CGFloat.pi / 2.0
-        let remaining = CGFloat(bucket.remainingPercent / 100.0)
-        let end = start + max(remaining, 0.018) * CGFloat.pi * 2.0
+        let usage = CGFloat(min(max(bucket.usedPercent, 0.0), 100.0) / 100.0)
+        let visibleUsage = bucket.usedPercent <= 0.0 ? 0.0 : max(usage, 0.018)
+        let end = start + visibleUsage * CGFloat.pi * 2.0
 
         context.saveGState()
         context.setLineCap(.round)
         context.setLineWidth(lineWidth)
-        context.setStrokeColor(NSColor(calibratedWhite: 0.0, alpha: 0.22).cgColor)
+        context.setStrokeColor(NSColor(calibratedWhite: 0.0, alpha: 0.30).cgColor)
         context.addArc(center: center, radius: radius + 1.0, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
         context.strokePath()
 
@@ -433,22 +434,30 @@ struct LimitRingRenderer {
         context.addArc(center: center, radius: radius, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
         context.strokePath()
 
-        context.setShadow(offset: .zero, blur: 10.0, color: color.withAlphaComponent(0.42).cgColor)
-        context.setStrokeColor(color.withAlphaComponent(0.30).cgColor)
-        context.setLineWidth(lineWidth + 6.0)
-        context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
-        context.strokePath()
+        if visibleUsage > 0.0 {
+            context.setShadow(offset: .zero, blur: 11.0, color: color.withAlphaComponent(0.46).cgColor)
+            context.setStrokeColor(color.withAlphaComponent(0.24).cgColor)
+            context.setLineWidth(lineWidth + 7.0)
+            context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
+            context.strokePath()
 
-        context.setShadow(offset: .zero, blur: 4.0, color: color.withAlphaComponent(0.52).cgColor)
-        context.setStrokeColor(color.cgColor)
-        context.setLineWidth(lineWidth)
-        context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
-        context.strokePath()
+            context.setShadow(offset: .zero, blur: 4.0, color: color.withAlphaComponent(0.56).cgColor)
+            context.setStrokeColor(color.cgColor)
+            context.setLineWidth(lineWidth)
+            context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
+            context.strokePath()
+
+            let endpoint = point(center: center, radius: radius, angle: end)
+            context.setShadow(offset: .zero, blur: 6.0, color: color.withAlphaComponent(0.55).cgColor)
+            context.setFillColor(color.withAlphaComponent(0.96).cgColor)
+            context.fillEllipse(in: CGRect(x: endpoint.x - lineWidth * 0.43, y: endpoint.y - lineWidth * 0.43, width: lineWidth * 0.86, height: lineWidth * 0.86))
+        }
 
         let glintAngle = start + CGFloat(phase.truncatingRemainder(dividingBy: 1.0)) * CGFloat.pi * 2.0
         let glint = point(center: center, radius: radius, angle: glintAngle)
-        context.setFillColor(NSColor(calibratedWhite: 1.0, alpha: 0.38).cgColor)
-        context.fillEllipse(in: CGRect(x: glint.x - 1.8, y: glint.y - 1.8, width: 3.6, height: 3.6))
+        context.setShadow(offset: .zero, blur: 0.0, color: nil)
+        context.setFillColor(NSColor(calibratedWhite: 1.0, alpha: 0.24).cgColor)
+        context.fillEllipse(in: CGRect(x: glint.x - 1.4, y: glint.y - 1.4, width: 2.8, height: 2.8))
         context.restoreGState()
     }
 
@@ -466,24 +475,24 @@ struct LimitRingRenderer {
         var readouts: [LimitReadout] = []
         if let primary = state.primary {
             readouts.append(makeReadout(
-                text: formatPercent(primary.remainingPercent),
+                text: formatPercent(primary.usedPercent),
                 center: center,
                 ringRadius: outerRadius,
                 labelRadius: outerRadius + 22.0,
-                remainingPercent: primary.remainingPercent,
-                color: color(forRemaining: primary.remainingPercent, role: .primary),
+                usagePercent: primary.usedPercent,
+                color: color(forUsage: primary.usedPercent, role: .primary),
                 bounds: bounds
             ))
         }
 
         if let secondary = state.secondary {
             readouts.append(makeReadout(
-                text: formatPercent(secondary.remainingPercent),
+                text: formatPercent(secondary.usedPercent),
                 center: center,
                 ringRadius: innerRadius,
                 labelRadius: innerRadius + 21.0,
-                remainingPercent: secondary.remainingPercent,
-                color: color(forRemaining: secondary.remainingPercent, role: .secondary),
+                usagePercent: secondary.usedPercent,
+                color: color(forUsage: secondary.usedPercent, role: .secondary),
                 bounds: bounds
             ))
         }
@@ -498,11 +507,11 @@ struct LimitRingRenderer {
         center: CGPoint,
         ringRadius: CGFloat,
         labelRadius: CGFloat,
-        remainingPercent: Double,
+        usagePercent: Double,
         color: NSColor,
         bounds: CGRect
     ) -> LimitReadout {
-        let angle = -CGFloat.pi / 2.0 + CGFloat(max(remainingPercent, 1.8) / 100.0) * CGFloat.pi * 2.0
+        let angle = -CGFloat.pi / 2.0 + CGFloat(max(usagePercent, 1.8) / 100.0) * CGFloat.pi * 2.0
         let ringPoint = point(center: center, radius: ringRadius, angle: angle)
         let labelPoint = point(center: center, radius: labelRadius, angle: angle)
         let labelSize = CGSize(width: text.count > 3 ? 45 : 38, height: 22)
@@ -607,30 +616,27 @@ struct LimitRingRenderer {
         guard state.primary != nil || state.secondary != nil else { return }
 
         context.saveGState()
-        context.setShadow(
-            offset: .zero,
-            blur: 13.0,
-            color: NSColor(calibratedWhite: 0.0, alpha: 0.70).cgColor
-        )
+        drawCenterBackdrop(context, center: center, minSide: minSide)
+        context.setShadow(offset: .zero, blur: 10.0, color: NSColor(calibratedWhite: 0.0, alpha: 0.74).cgColor)
 
         if let primary = state.primary {
-            let color = color(forRemaining: primary.remainingPercent, role: .primary)
+            let color = color(forUsage: primary.usedPercent, role: .primary)
             drawCenteredText(
                 "5h used",
                 center: CGPoint(x: center.x, y: center.y + minSide * 0.112),
-                font: NSFont.monospacedSystemFont(ofSize: max(6.5, minSide * 0.050), weight: .semibold),
-                color: color.withAlphaComponent(0.78)
+                font: NSFont.monospacedSystemFont(ofSize: max(6.5, minSide * 0.048), weight: .bold),
+                color: color.withAlphaComponent(0.86)
             )
             drawCenteredText(
                 formatPercent(primary.usedPercent),
                 center: CGPoint(x: center.x, y: center.y + minSide * 0.015),
-                font: NSFont.monospacedSystemFont(ofSize: max(16.0, minSide * 0.170), weight: .heavy),
+                font: NSFont.monospacedSystemFont(ofSize: max(16.0, minSide * 0.162), weight: .heavy),
                 color: color
             )
         }
 
         if let secondary = state.secondary {
-            let color = color(forRemaining: secondary.remainingPercent, role: .secondary)
+            let color = color(forUsage: secondary.usedPercent, role: .secondary)
             drawCenteredText(
                 "Week \(formatPercent(secondary.usedPercent))",
                 center: CGPoint(x: center.x, y: center.y - minSide * 0.138),
@@ -639,6 +645,28 @@ struct LimitRingRenderer {
             )
         }
 
+        context.restoreGState()
+    }
+
+    private func drawCenterBackdrop(_ context: CGContext, center: CGPoint, minSide: CGFloat) {
+        let size = CGSize(width: minSide * 0.48, height: minSide * 0.37)
+        let rect = CGRect(
+            x: center.x - size.width / 2,
+            y: center.y - size.height / 2 - minSide * 0.012,
+            width: size.width,
+            height: size.height
+        )
+        let path = CGPath(roundedRect: rect, cornerWidth: minSide * 0.07, cornerHeight: minSide * 0.07, transform: nil)
+        context.saveGState()
+        context.setShadow(offset: .zero, blur: 12.0, color: NSColor(calibratedWhite: 0.0, alpha: 0.36).cgColor)
+        context.setFillColor(NSColor(calibratedWhite: 0.02, alpha: 0.40).cgColor)
+        context.addPath(path)
+        context.fillPath()
+        context.setShadow(offset: .zero, blur: 0.0, color: nil)
+        context.setStrokeColor(NSColor(calibratedWhite: 1.0, alpha: 0.08).cgColor)
+        context.setLineWidth(0.8)
+        context.addPath(path)
+        context.strokePath()
         context.restoreGState()
     }
 
@@ -663,7 +691,7 @@ struct LimitRingRenderer {
         for (index, item) in dots.enumerated() {
             let angle = -CGFloat.pi / 2.0 + CGFloat(index) / CGFloat(max(dots.count, 1)) * CGFloat.pi * 2.0
             let dot = point(center: center, radius: radius, angle: angle)
-            let color = color(forRemaining: item.bucket.remainingPercent, role: .primary)
+            let color = color(forUsage: item.bucket.usedPercent, role: .primary)
             context.setShadow(offset: .zero, blur: 5.0, color: color.withAlphaComponent(0.35).cgColor)
             context.setFillColor(color.withAlphaComponent(0.82).cgColor)
             context.fillEllipse(in: CGRect(x: dot.x - 2.4, y: dot.y - 2.4, width: 4.8, height: 4.8))
@@ -671,17 +699,20 @@ struct LimitRingRenderer {
         context.restoreGState()
     }
 
-    private func color(forRemaining remaining: Double, role: RingRole) -> NSColor {
-        if remaining <= 12 {
-            return NSColor(calibratedRed: 1.00, green: 0.26, blue: 0.22, alpha: 0.96)
+    private func color(forUsage usage: Double, role: RingRole) -> NSColor {
+        if usage >= 88 {
+            return NSColor(calibratedRed: 1.00, green: 0.24, blue: 0.22, alpha: 0.98)
         }
-        if remaining <= 30 {
-            return NSColor(calibratedRed: 1.00, green: 0.68, blue: 0.20, alpha: 0.96)
+        if usage >= 70 {
+            return NSColor(calibratedRed: 1.00, green: 0.62, blue: 0.18, alpha: 0.98)
+        }
+        if usage >= 45 {
+            return NSColor(calibratedRed: 0.93, green: 0.82, blue: 0.28, alpha: 0.96)
         }
         if role == .secondary {
-            return NSColor(calibratedRed: 0.36, green: 0.70, blue: 1.00, alpha: 0.90)
+            return NSColor(calibratedRed: 0.42, green: 0.72, blue: 1.00, alpha: 0.94)
         }
-        return NSColor(calibratedRed: 0.24, green: 0.92, blue: 0.74, alpha: 0.96)
+        return NSColor(calibratedRed: 0.24, green: 0.94, blue: 0.78, alpha: 0.98)
     }
 
     private func point(center: CGPoint, radius: CGFloat, angle: CGFloat) -> CGPoint {
@@ -957,8 +988,8 @@ final class LimitRingsApp: NSObject {
 
     private func updateSummaryMenuItem() {
         guard let summaryItem else { return }
-        let primary = ringView.state.primary.map { "Short \(formatPercent($0.remainingPercent))" }
-        let secondary = ringView.state.secondary.map { "Weekly \(formatPercent($0.remainingPercent))" }
+        let primary = ringView.state.primary.map { "5h used \(formatPercent($0.usedPercent))" }
+        let secondary = ringView.state.secondary.map { "Weekly used \(formatPercent($0.usedPercent))" }
         let pieces = [primary, secondary].compactMap { $0 }
         if pieces.isEmpty {
             summaryItem.title = "Waiting for Codex limit data"
