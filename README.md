@@ -14,7 +14,9 @@ Download the latest macOS installer package:
 
 - [CodexPetLimitRings-0.4.0.pkg](https://github.com/jung-wan-kim/codex-pet-limit-rings/releases/download/v0.4.0/CodexPetLimitRings-0.4.0.pkg)
 
-The `.pkg` installs `CodexPetLimitRings.app` into `/Applications`, writes the per-user LaunchAgent, and starts the menu-bar companion. The package is unsigned, so macOS may ask you to confirm opening it.
+The `.pkg` installs `CodexPetLimitRings.app` into `/Applications`, writes the per-user LaunchAgent, and starts the menu-bar companion.
+
+> **macOS Gatekeeper note:** the public package is currently unsigned because this repo does not have a Developer ID Installer certificate. If macOS says Apple cannot verify the package, install only if you trust this repo: either right-click/control-click the package and choose **Open**, approve it in **System Settings → Privacy & Security → Open Anyway**, or run `sudo installer -pkg ~/Downloads/CodexPetLimitRings-0.4.0.pkg -target /`. Future signed builds can be produced by setting `CODEX_PET_LIMIT_RINGS_PKG_SIGN_IDENTITY` and `CODEX_PET_LIMIT_RINGS_NOTARY_PROFILE`.
 
 ## What’s New in 0.4.0
 

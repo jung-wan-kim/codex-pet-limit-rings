@@ -56,6 +56,14 @@ tools/build-limit-rings-pkg.sh
 tools/package-limit-rings-dmg.sh
 ```
 
+For Gatekeeper-friendly public distribution, sign with a Developer ID Installer certificate and notarize by setting:
+
+```bash
+CODEX_PET_LIMIT_RINGS_PKG_SIGN_IDENTITY="Developer ID Installer: ..." \
+CODEX_PET_LIMIT_RINGS_NOTARY_PROFILE="<notarytool-profile>" \
+tools/build-limit-rings-pkg.sh
+```
+
 Verify the live app:
 
 ```bash

@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ROOT/tools/CodexPetLimitRings-Info.plist" 2>/dev/null || echo dev)"
 OUT="${1:-$ROOT/dist/CodexPetLimitRings-$VERSION.pkg}"
+SIGN_IDENTITY="${CODEX_PET_LIMIT_RINGS_PKG_SIGN_IDENTITY:-}"
+NOTARY_PROFILE="${CODEX_PET_LIMIT_RINGS_NOTARY_PROFILE:-}"
 WORK_DIR="$ROOT/tmp/pkg"
 PAYLOAD="$WORK_DIR/payload"
 SCRIPTS="$WORK_DIR/scripts"
@@ -84,14 +86,29 @@ POSTINSTALL
 chmod +x "$SCRIPTS/postinstall"
 
 rm -f "$OUT"
+PKG_OUT="$OUT"
+if [ -n "$SIGN_IDENTITY" ]; then
+  PKG_OUT="$WORK_DIR/CodexPetLimitRings-$VERSION.unsigned.pkg"
+fi
+
 pkgbuild \
   --root "$PAYLOAD" \
   --scripts "$SCRIPTS" \
   --identifier "$IDENTIFIER" \
   --version "$VERSION" \
   --install-location / \
-  "$OUT" >/dev/null
+  "$PKG_OUT" >/dev/null
 
-pkgutil --check-signature "$OUT" >/dev/null 2>&1 || true
+if [ -n "$SIGN_IDENTITY" ]; then
+  productsign --sign "$SIGN_IDENTITY" "$PKG_OUT" "$OUT" >/dev/null
+  pkgutil --check-signature "$OUT" >/dev/null
+else
+  pkgutil --check-signature "$OUT" >/dev/null 2>&1 || true
+fi
+
+if [ -n "$NOTARY_PROFILE" ]; then
+  xcrun notarytool submit "$OUT" --keychain-profile "$NOTARY_PROFILE" --wait >/dev/null
+  xcrun stapler staple "$OUT" >/dev/null
+fi
 
 echo "$OUT"
