@@ -42,6 +42,12 @@ enum CenterDisplayMode: String {
     }
 }
 
+private enum DragCursorMode {
+    case none
+    case open
+    case closed
+}
+
 private struct EventPayload: Decodable {
     var type: String
     var plan_type: String?
@@ -666,6 +672,7 @@ final class LimitRingsApp: NSObject {
     private var holdDraggedFrameUntil: Date?
     private var lockedPanelFrame: CGRect?
     private var centerDisplayMode: CenterDisplayMode
+    private var dragCursorMode: DragCursorMode = .none
     private var ringsVisible: Bool
     private var stateReadInFlight = false
 
@@ -749,6 +756,7 @@ final class LimitRingsApp: NSObject {
             currentPetFrameAppKit = nil
             dragCenterOffset = nil
             ringView.showsReadout = false
+            setDragCursorMode(.none)
             panel.orderOut(nil)
             return
         }
@@ -928,6 +936,7 @@ final class LimitRingsApp: NSObject {
             updateTooltip(at: NSEvent.mouseLocation)
         } else {
             ringView.showsReadout = false
+            setDragCursorMode(.none)
             panel.orderOut(nil)
         }
     }
@@ -1016,16 +1025,16 @@ final class LimitRingsApp: NSObject {
     private func beginDragFollowIfNeeded(at mouse: CGPoint) {
         guard ringsVisible else { return }
         updateFrame()
-        guard let currentPetFrameAppKit else { return }
-        let hitTarget = currentPetFrameAppKit.insetBy(dx: -24, dy: -24)
-        guard hitTarget.contains(mouse) else { return }
+        guard isDraggableHit(mouse) else { return }
 
         dragCenterOffset = CGPoint(x: panel.frame.midX - mouse.x, y: panel.frame.midY - mouse.y)
         holdDraggedFrameUntil = nil
+        setDragCursorMode(.closed)
     }
 
     private func continueDragFollow(at mouse: CGPoint) {
         guard let offset = dragCenterOffset else { return }
+        setDragCursorMode(.closed)
         let size = panel.frame.size
         let center = CGPoint(x: mouse.x + offset.x, y: mouse.y + offset.y)
         let origin = CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2)
@@ -1041,15 +1050,47 @@ final class LimitRingsApp: NSObject {
         holdDraggedFrameUntil = nil
         saveLockedPanelFrame(panel.frame)
         currentPetFrameAppKit = inferredPetFrame(fromPanelFrame: panel.frame)
+        updateTooltip(at: NSEvent.mouseLocation)
     }
 
     private func updateTooltip(at mouse: CGPoint) {
-        if !ringsVisible || currentPetFrameAppKit == nil || dragCenterOffset != nil {
+        if dragCenterOffset != nil {
+            setDragCursorMode(.closed)
             ringView.showsReadout = false
             return
         }
 
-        ringView.showsReadout = isHoveringRingOrPet(mouse)
+        if !ringsVisible || currentPetFrameAppKit == nil {
+            setDragCursorMode(.none)
+            ringView.showsReadout = false
+            return
+        }
+
+        let hovering = isHoveringRingOrPet(mouse)
+        let hoveringReadout = ringView.showsReadout && isHoveringReadoutStack(mouse)
+        ringView.showsReadout = hovering || hoveringReadout
+        setDragCursorMode((hovering || hoveringReadout) ? .open : .none)
+    }
+
+    private func setDragCursorMode(_ mode: DragCursorMode) {
+        guard dragCursorMode != mode else {
+            if mode == .open {
+                NSCursor.openHand.set()
+            } else if mode == .closed {
+                NSCursor.closedHand.set()
+            }
+            return
+        }
+
+        dragCursorMode = mode
+        switch mode {
+        case .none:
+            NSCursor.arrow.set()
+        case .open:
+            NSCursor.openHand.set()
+        case .closed:
+            NSCursor.closedHand.set()
+        }
     }
 
     private func isCenterToggleHit(_ mouse: CGPoint) -> Bool {
@@ -1065,6 +1106,10 @@ final class LimitRingsApp: NSObject {
             height: hitSize.height
         )
         return hitRect.contains(mouse)
+    }
+
+    private func isDraggableHit(_ mouse: CGPoint) -> Bool {
+        isHoveringRingOrPet(mouse) || isHoveringReadoutStack(mouse)
     }
 
     private func isHoveringRingOrPet(_ mouse: CGPoint) -> Bool {
@@ -1083,6 +1128,23 @@ final class LimitRingsApp: NSObject {
         let distance = hypot(local.x - center.x, local.y - center.y)
         let radius = min(frame.width, frame.height) * 0.5 - 16.0
         return distance >= radius - 24.0 && distance <= radius + 19.0
+    }
+
+    private func isHoveringReadoutStack(_ mouse: CGPoint) -> Bool {
+        guard ringsVisible, currentPetFrameAppKit != nil, ringView.showsReadout else { return false }
+        let frame = panel.frame
+        let inset: CGFloat = 4.0
+        let labelGap: CGFloat = 3.0
+        let labelHeight = max(16.0, min(18.5, frame.height * 0.13))
+        let stackHeight = labelHeight * 2.0 + labelGap
+        let stackWidth = min(frame.width - inset * 2.0, max(70.0, frame.width * 0.66))
+        let stackRect = CGRect(
+            x: frame.midX - stackWidth / 2.0,
+            y: frame.minY + inset,
+            width: stackWidth,
+            height: stackHeight
+        ).insetBy(dx: -5.0, dy: -4.0)
+        return stackRect.contains(mouse)
     }
 
     private func appKitOriginFromTopLeft(_ topLeft: CGPoint, size: CGSize) -> CGPoint {

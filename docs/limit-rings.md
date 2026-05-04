@@ -10,7 +10,7 @@ The rings are pet-agnostic. They work with any pet Codex displays because the ap
 - `Show Rings` toggles the overlay without quitting the app.
 - `Refresh Now` rereads usage and pet-position state.
 - `Reset Ring Position` clears the saved manual ring position and returns to Codex pet tracking.
-- Dragging the pet/rings saves the new overlay position so stale Codex bounds do not snap the rings back.
+- Hovering over the pet/rings changes the cursor to an open hand, and dragging from that hover area saves the new overlay position so stale Codex bounds do not snap the rings back.
 - The center of the rings shows the short-window percentage as the large value and weekly percentage as the smaller value.
 - Clicking the center toggles that display between used percentage and remaining-limit percentage.
 - Hovering over the ring or pet shows two reset countdowns together below the center, with the 5h value above the weekly value and colors matching their rings.
