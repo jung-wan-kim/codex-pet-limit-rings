@@ -353,10 +353,10 @@ struct LimitRingRenderer {
             )
         }
 
-        drawCenterUsage(context, center: center, minSide: minSide)
         if showsReadout {
-            drawLimitReadouts(context, center: center, outerRadius: outerRadius, innerRadius: innerRadius, bounds: rect)
+            drawLimitReadouts(context, center: center, bounds: rect)
         }
+        drawCenterUsage(context, center: center, minSide: minSide)
         context.restoreGState()
     }
 
@@ -367,10 +367,8 @@ struct LimitRingRenderer {
 
     private struct LimitReadout {
         var text: String
-        var ringPoint: CGPoint
         var labelRect: CGRect
         var color: NSColor
-        var angle: CGFloat
     }
 
     private func urgency(for bucket: LimitBucket?) -> Double {
@@ -422,58 +420,57 @@ struct LimitRingRenderer {
         context.restoreGState()
     }
 
-    private func drawLimitReadouts(_ context: CGContext, center: CGPoint, outerRadius: CGFloat, innerRadius: CGFloat, bounds: CGRect) {
-        var readouts: [LimitReadout] = []
+    private enum ReadoutSlot {
+        case top
+        case bottom
+    }
+
+    private func drawLimitReadouts(_ context: CGContext, center: CGPoint, bounds: CGRect) {
         if let primary = state.primary {
-            readouts.append(makeReadout(
-                text: formatResetCountdown(primary),
+            drawReadout(context, readout: makeReadout(
+                text: "5h \(formatResetCountdown(primary))",
                 center: center,
-                ringRadius: outerRadius,
-                labelRadius: outerRadius + 22.0,
-                usagePercent: primary.usedPercent,
                 color: color(forUsage: primary.usedPercent, role: .primary),
+                slot: .top,
                 bounds: bounds
             ))
         }
 
         if let secondary = state.secondary {
-            readouts.append(makeReadout(
-                text: formatResetCountdown(secondary),
+            drawReadout(context, readout: makeReadout(
+                text: "Week \(formatResetCountdown(secondary))",
                 center: center,
-                ringRadius: innerRadius,
-                labelRadius: innerRadius + 21.0,
-                usagePercent: secondary.usedPercent,
                 color: color(forUsage: secondary.usedPercent, role: .secondary),
+                slot: .bottom,
                 bounds: bounds
             ))
-        }
-
-        for readout in resolveReadoutOverlaps(readouts, bounds: bounds) {
-            drawReadout(context, readout: readout)
         }
     }
 
     private func makeReadout(
         text: String,
         center: CGPoint,
-        ringRadius: CGFloat,
-        labelRadius: CGFloat,
-        usagePercent: Double,
         color: NSColor,
+        slot: ReadoutSlot,
         bounds: CGRect
     ) -> LimitReadout {
-        let angle = ringUsageStartAngle - CGFloat(max(usagePercent, 1.8) / 100.0) * CGFloat.pi * 2.0
-        let ringPoint = point(center: center, radius: ringRadius, angle: angle)
-        let labelPoint = point(center: center, radius: labelRadius, angle: angle)
-        let labelSize = CGSize(width: max(38.0, min(76.0, CGFloat(text.count) * 7.2 + 16.0)), height: 22)
-        var labelRect = CGRect(
-            x: labelPoint.x - labelSize.width / 2,
-            y: labelPoint.y - labelSize.height / 2,
-            width: labelSize.width,
-            height: labelSize.height
+        let inset: CGFloat = 4.0
+        let labelHeight = max(18.0, min(21.0, bounds.height * 0.15))
+        let labelWidth = min(bounds.width - inset * 2.0, max(54.0, CGFloat(text.count) * 6.2 + 15.0))
+        let labelY: CGFloat
+        switch slot {
+        case .top:
+            labelY = bounds.maxY - inset - labelHeight
+        case .bottom:
+            labelY = bounds.minY + inset
+        }
+        let labelRect = CGRect(
+            x: center.x - labelWidth / 2.0,
+            y: labelY,
+            width: labelWidth,
+            height: labelHeight
         )
-        labelRect = clamp(labelRect, inside: bounds)
-        return LimitReadout(text: text, ringPoint: ringPoint, labelRect: labelRect, color: color, angle: angle)
+        return LimitReadout(text: text, labelRect: labelRect, color: color)
     }
 
     private func formatResetCountdown(_ bucket: LimitBucket) -> String {
@@ -503,72 +500,8 @@ struct LimitRingRenderer {
         return "\(max(1, minutes))m"
     }
 
-    private func resolveReadoutOverlaps(_ readouts: [LimitReadout], bounds: CGRect) -> [LimitReadout] {
-        guard readouts.count > 1 else { return readouts }
-        var resolved = readouts
-
-        let averageAngle = resolved.map(\.angle).reduce(0, +) / CGFloat(resolved.count)
-        let tangent = CGPoint(x: -sin(averageAngle), y: cos(averageAngle))
-        for index in resolved.indices {
-            let direction = index == 0 ? -1.0 : 1.0
-            resolved[index].labelRect = clamp(resolved[index].labelRect.offsetBy(dx: tangent.x * 12.0 * direction, dy: tangent.y * 12.0 * direction), inside: bounds)
-        }
-
-        for _ in 0..<8 {
-            var changed = false
-            for firstIndex in 0..<resolved.count {
-                for secondIndex in (firstIndex + 1)..<resolved.count {
-                    let first = expanded(resolved[firstIndex].labelRect)
-                    let second = expanded(resolved[secondIndex].labelRect)
-                    guard first.intersects(second) else { continue }
-
-                    let xOverlap = min(first.maxX, second.maxX) - max(first.minX, second.minX)
-                    let yOverlap = min(first.maxY, second.maxY) - max(first.minY, second.minY)
-                    let gap: CGFloat = 6.0
-                    if xOverlap <= yOverlap {
-                        let direction: CGFloat = resolved[firstIndex].labelRect.midX <= resolved[secondIndex].labelRect.midX ? -1.0 : 1.0
-                        let nudge = xOverlap / 2.0 + gap
-                        resolved[firstIndex].labelRect = resolved[firstIndex].labelRect.offsetBy(dx: direction * nudge, dy: 0)
-                        resolved[secondIndex].labelRect = resolved[secondIndex].labelRect.offsetBy(dx: -direction * nudge, dy: 0)
-                    } else {
-                        let direction: CGFloat = resolved[firstIndex].labelRect.midY <= resolved[secondIndex].labelRect.midY ? -1.0 : 1.0
-                        let nudge = yOverlap / 2.0 + gap
-                        resolved[firstIndex].labelRect = resolved[firstIndex].labelRect.offsetBy(dx: 0, dy: direction * nudge)
-                        resolved[secondIndex].labelRect = resolved[secondIndex].labelRect.offsetBy(dx: 0, dy: -direction * nudge)
-                    }
-
-                    resolved[firstIndex].labelRect = clamp(resolved[firstIndex].labelRect, inside: bounds)
-                    resolved[secondIndex].labelRect = clamp(resolved[secondIndex].labelRect, inside: bounds)
-                    changed = true
-                }
-            }
-            if !changed { break }
-        }
-
-        return resolved
-    }
-
-    private func expanded(_ rect: CGRect) -> CGRect {
-        rect.insetBy(dx: -4.0, dy: -3.0)
-    }
-
-    private func clamp(_ rect: CGRect, inside bounds: CGRect) -> CGRect {
-        var clamped = rect
-        let inset = bounds.insetBy(dx: 4, dy: 4)
-        clamped.origin.x = min(max(clamped.minX, inset.minX), inset.maxX - clamped.width)
-        clamped.origin.y = min(max(clamped.minY, inset.minY), inset.maxY - clamped.height)
-        return clamped
-    }
-
     private func drawReadout(_ context: CGContext, readout: LimitReadout) {
         context.saveGState()
-        context.setLineCap(.round)
-        context.setStrokeColor(readout.color.withAlphaComponent(0.44).cgColor)
-        context.setLineWidth(1.2)
-        context.move(to: readout.ringPoint)
-        context.addLine(to: CGPoint(x: readout.labelRect.midX, y: readout.labelRect.midY))
-        context.strokePath()
-
         let path = CGPath(roundedRect: readout.labelRect, cornerWidth: 8.0, cornerHeight: 8.0, transform: nil)
         context.setShadow(offset: .zero, blur: 8.0, color: readout.color.withAlphaComponent(0.22).cgColor)
         context.setFillColor(NSColor(calibratedWhite: 0.055, alpha: 0.78).cgColor)
@@ -576,7 +509,7 @@ struct LimitRingRenderer {
         context.fillPath()
 
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 11.5, weight: .semibold),
+            .font: NSFont.monospacedSystemFont(ofSize: max(9.0, min(10.5, readout.labelRect.height * 0.55)), weight: .semibold),
             .foregroundColor: NSColor(calibratedWhite: 1.0, alpha: 0.92)
         ]
         let attributed = NSAttributedString(string: readout.text, attributes: attrs)
@@ -670,10 +603,6 @@ struct LimitRingRenderer {
             return NSColor(calibratedRed: 0.42, green: 0.72, blue: 1.00, alpha: 0.94)
         }
         return NSColor(calibratedRed: 0.24, green: 0.94, blue: 0.78, alpha: 0.98)
-    }
-
-    private func point(center: CGPoint, radius: CGFloat, angle: CGFloat) -> CGPoint {
-        CGPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius)
     }
 
     private func formatPercent(_ percent: Double) -> String {
