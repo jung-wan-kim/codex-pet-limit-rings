@@ -665,6 +665,7 @@ final class LimitRingsApp: NSObject {
     private var mouseDragMonitor: Any?
     private var mouseUpMonitor: Any?
     private var mouseMoveMonitor: Any?
+    private var localMouseMonitor: Any?
     private var centerClickStart: CGPoint?
     private var startTime = Date()
     private var currentPetFrameAppKit: CGRect?
@@ -697,6 +698,7 @@ final class LimitRingsApp: NSObject {
         panel.isOpaque = false
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
+        panel.acceptsMouseMovedEvents = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         super.init()
@@ -756,6 +758,7 @@ final class LimitRingsApp: NSObject {
             currentPetFrameAppKit = nil
             dragCenterOffset = nil
             ringView.showsReadout = false
+            setPanelMouseCapture(false)
             setDragCursorMode(.none)
             panel.orderOut(nil)
             return
@@ -936,6 +939,7 @@ final class LimitRingsApp: NSObject {
             updateTooltip(at: NSEvent.mouseLocation)
         } else {
             ringView.showsReadout = false
+            setPanelMouseCapture(false)
             setDragCursorMode(.none)
             panel.orderOut(nil)
         }
@@ -968,6 +972,10 @@ final class LimitRingsApp: NSObject {
     }
 
     private func installDragFollow() {
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .mouseMoved]) { [weak self] event in
+            self?.handleMouseEvent(event)
+            return event
+        }
         mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] _ in
             DispatchQueue.main.async {
                 self?.handleMouseDown(at: NSEvent.mouseLocation)
@@ -990,10 +998,36 @@ final class LimitRingsApp: NSObject {
         }
     }
 
+    private func handleMouseEvent(_ event: NSEvent) {
+        let mouse = screenPoint(for: event)
+        switch event.type {
+        case .leftMouseDown:
+            handleMouseDown(at: mouse)
+        case .leftMouseDragged:
+            handleMouseDrag(at: mouse)
+        case .leftMouseUp:
+            handleMouseUp(at: mouse)
+        case .mouseMoved:
+            updateTooltip(at: mouse)
+        default:
+            break
+        }
+    }
+
+    private func screenPoint(for event: NSEvent) -> CGPoint {
+        guard let window = event.window else {
+            return NSEvent.mouseLocation
+        }
+
+        let location = event.locationInWindow
+        return CGPoint(x: window.frame.minX + location.x, y: window.frame.minY + location.y)
+    }
+
     private func handleMouseDown(at mouse: CGPoint) {
         guard ringsVisible else { return }
         if isCenterToggleHit(mouse) {
             centerClickStart = mouse
+            setPanelMouseCapture(true)
             return
         }
         beginDragFollowIfNeeded(at: mouse)
@@ -1017,6 +1051,7 @@ final class LimitRingsApp: NSObject {
             if isCenterToggleHit(mouse) {
                 setCenterDisplayMode(centerDisplayMode.next)
             }
+            updateTooltip(at: mouse)
             return
         }
         endDragFollow()
@@ -1029,11 +1064,13 @@ final class LimitRingsApp: NSObject {
 
         dragCenterOffset = CGPoint(x: panel.frame.midX - mouse.x, y: panel.frame.midY - mouse.y)
         holdDraggedFrameUntil = nil
+        setPanelMouseCapture(true)
         setDragCursorMode(.closed)
     }
 
     private func continueDragFollow(at mouse: CGPoint) {
         guard let offset = dragCenterOffset else { return }
+        setPanelMouseCapture(true)
         setDragCursorMode(.closed)
         let size = panel.frame.size
         let center = CGPoint(x: mouse.x + offset.x, y: mouse.y + offset.y)
@@ -1055,12 +1092,14 @@ final class LimitRingsApp: NSObject {
 
     private func updateTooltip(at mouse: CGPoint) {
         if dragCenterOffset != nil {
+            setPanelMouseCapture(true)
             setDragCursorMode(.closed)
             ringView.showsReadout = false
             return
         }
 
         if !ringsVisible || currentPetFrameAppKit == nil {
+            setPanelMouseCapture(false)
             setDragCursorMode(.none)
             ringView.showsReadout = false
             return
@@ -1069,7 +1108,15 @@ final class LimitRingsApp: NSObject {
         let hovering = isHoveringRingOrPet(mouse)
         let hoveringReadout = ringView.showsReadout && isHoveringReadoutStack(mouse)
         ringView.showsReadout = hovering || hoveringReadout
-        setDragCursorMode((hovering || hoveringReadout) ? .open : .none)
+        let shouldCapture = hovering || hoveringReadout || centerClickStart != nil
+        setPanelMouseCapture(shouldCapture)
+        setDragCursorMode(shouldCapture ? .open : .none)
+    }
+
+    private func setPanelMouseCapture(_ capturesMouse: Bool) {
+        let shouldIgnoreMouse = !capturesMouse
+        guard panel.ignoresMouseEvents != shouldIgnoreMouse else { return }
+        panel.ignoresMouseEvents = shouldIgnoreMouse
     }
 
     private func setDragCursorMode(_ mode: DragCursorMode) {
