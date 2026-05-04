@@ -421,8 +421,8 @@ struct LimitRingRenderer {
     }
 
     private enum ReadoutSlot {
-        case top
-        case bottom
+        case lowerTop
+        case lowerBottom
     }
 
     private func drawLimitReadouts(_ context: CGContext, center: CGPoint, bounds: CGRect) {
@@ -431,17 +431,17 @@ struct LimitRingRenderer {
                 text: "5h \(formatResetCountdown(primary))",
                 center: center,
                 color: color(forUsage: primary.usedPercent, role: .primary),
-                slot: .top,
+                slot: .lowerTop,
                 bounds: bounds
             ))
         }
 
         if let secondary = state.secondary {
             drawReadout(context, readout: makeReadout(
-                text: "Week \(formatResetCountdown(secondary))",
+                text: "Weekly \(formatResetCountdown(secondary))",
                 center: center,
                 color: color(forUsage: secondary.usedPercent, role: .secondary),
-                slot: .bottom,
+                slot: .lowerBottom,
                 bounds: bounds
             ))
         }
@@ -455,13 +455,14 @@ struct LimitRingRenderer {
         bounds: CGRect
     ) -> LimitReadout {
         let inset: CGFloat = 4.0
-        let labelHeight = max(18.0, min(21.0, bounds.height * 0.15))
-        let labelWidth = min(bounds.width - inset * 2.0, max(54.0, CGFloat(text.count) * 6.2 + 15.0))
+        let labelGap: CGFloat = 3.0
+        let labelHeight = max(16.0, min(18.5, bounds.height * 0.13))
+        let labelWidth = min(bounds.width - inset * 2.0, max(58.0, CGFloat(text.count) * 5.9 + 14.0))
         let labelY: CGFloat
         switch slot {
-        case .top:
-            labelY = bounds.maxY - inset - labelHeight
-        case .bottom:
+        case .lowerTop:
+            labelY = bounds.minY + inset + labelHeight + labelGap
+        case .lowerBottom:
             labelY = bounds.minY + inset
         }
         let labelRect = CGRect(
@@ -509,8 +510,8 @@ struct LimitRingRenderer {
         context.fillPath()
 
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: max(9.0, min(10.5, readout.labelRect.height * 0.55)), weight: .semibold),
-            .foregroundColor: NSColor(calibratedWhite: 1.0, alpha: 0.92)
+            .font: NSFont.monospacedSystemFont(ofSize: max(8.5, min(10.0, readout.labelRect.height * 0.56)), weight: .bold),
+            .foregroundColor: readout.color.withAlphaComponent(0.96)
         ]
         let attributed = NSAttributedString(string: readout.text, attributes: attrs)
         let textSize = attributed.size()
