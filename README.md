@@ -8,6 +8,23 @@ It works with whatever Codex pet you like. Built-in pet, custom pet, tiny dog, r
 
 ![Codex Pet Limit Rings around a Codex pet](docs/assets/codex-pet-limit-rings-screenshot.png)
 
+## Latest Installer
+
+Download the latest macOS installer package:
+
+- [CodexPetLimitRings-0.4.0.pkg](https://github.com/jung-wan-kim/codex-pet-limit-rings/releases/download/v0.4.0/CodexPetLimitRings-0.4.0.pkg)
+
+The `.pkg` installs `CodexPetLimitRings.app` into `/Applications`, writes the per-user LaunchAgent, and starts the menu-bar companion. The package is unsigned, so macOS may ask you to confirm opening it.
+
+## What’s New in 0.4.0
+
+- Added a branded macOS app icon and embedded it in the app bundle.
+- Added a standalone `.pkg` installer that installs into `/Applications` and starts the companion app.
+- Added optional DMG packaging with a Finder-style `Applications` alias for drag-install fallback.
+- Improved the compact ring UI: 70% sizing, clockwise usage arcs from 12 o’clock, center usage/remaining toggle, and cleaner borderless visuals.
+- Improved hover behavior: reset countdown stack, ring-matched colors, tighter spacing, and draggable hover area.
+- Persisted dragged ring position so the overlay does not snap back after moving.
+
 ## What You See
 
 The rings are designed to be glanceable:
@@ -42,13 +59,13 @@ Install the rings as a login item:
 tools/install-limit-rings.sh
 ```
 
-Build a shareable macOS DMG:
+Build a shareable macOS installer package locally:
 
 ```bash
-tools/package-limit-rings-dmg.sh
+tools/build-limit-rings-pkg.sh
 ```
 
-The DMG contains an installer package, `CodexPetLimitRings.app`, a Finder-style `Applications` alias, and a short install README. Double-click `Install Codex Pet Limit Rings.pkg` inside the DMG to copy the app to `/Applications` and start the menu-bar companion for the current user.
+This writes `dist/CodexPetLimitRings-<version>.pkg`. Optional DMG packaging remains available via `tools/package-limit-rings-dmg.sh`, but the recommended distributable is the `.pkg` installer.
 
 You should see a small rings icon in the macOS menu bar. Use that menu to toggle `Show Rings`, refresh the latest usage data, reset the locked position, or quit.
 
