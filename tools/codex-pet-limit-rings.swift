@@ -633,6 +633,12 @@ final class LimitRingView: NSView {
     var centerDisplayMode: CenterDisplayMode = .used {
         didSet { needsDisplay = true }
     }
+    fileprivate var cursorMode: DragCursorMode = .none {
+        didSet {
+            window?.invalidateCursorRects(for: self)
+            applyCursorMode()
+        }
+    }
 
     override var isOpaque: Bool { false }
 
@@ -643,6 +649,43 @@ final class LimitRingView: NSView {
             showsReadout: showsReadout,
             centerDisplayMode: centerDisplayMode
         ).draw(in: bounds)
+    }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        switch cursorMode {
+        case .none:
+            break
+        case .open:
+            addCursorRect(bounds, cursor: .openHand)
+        case .closed:
+            addCursorRect(bounds, cursor: .closedHand)
+        }
+    }
+
+    override func cursorUpdate(with event: NSEvent) {
+        applyCursorMode()
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        applyCursorMode()
+        super.mouseMoved(with: event)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        applyCursorMode()
+        super.mouseDragged(with: event)
+    }
+
+    private func applyCursorMode() {
+        switch cursorMode {
+        case .none:
+            NSCursor.arrow.set()
+        case .open:
+            NSCursor.openHand.set()
+        case .closed:
+            NSCursor.closedHand.set()
+        }
     }
 }
 
@@ -1130,6 +1173,7 @@ final class LimitRingsApp: NSObject {
         }
 
         dragCursorMode = mode
+        ringView.cursorMode = mode
         switch mode {
         case .none:
             NSCursor.arrow.set()
