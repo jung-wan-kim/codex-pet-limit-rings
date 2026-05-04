@@ -8,40 +8,50 @@ It works with whatever Codex pet you like. Built-in pet, custom pet, tiny dog, r
 
 ![Codex Pet Limit Rings around a Codex pet](docs/assets/codex-pet-limit-rings-screenshot.png)
 
-## Latest Installer
+## Install
 
-Download the latest macOS installer package:
+### Recommended until Apple signing is available: build from source
+
+The public package is not Apple Developer ID signed yet, so double-clicking the downloaded `.pkg` will still show macOS Gatekeeper’s **“Not Opened”** warning. To avoid that double-click flow, clone the repo and install from source:
+
+```bash
+git clone https://github.com/jung-wan-kim/codex-pet-limit-rings.git
+cd codex-pet-limit-rings
+tools/install-limit-rings.sh
+```
+
+This builds the companion locally, installs `CodexPetLimitRings.app` into `~/Applications`, writes the per-user LaunchAgent, and starts the menu-bar companion.
+
+### Unsigned package: terminal install only
+
+If you still want the current package artifact, download it here:
 
 - [CodexPetLimitRings-0.4.0.pkg](https://github.com/jung-wan-kim/codex-pet-limit-rings/releases/download/v0.4.0/CodexPetLimitRings-0.4.0.pkg)
 
-The `.pkg` installs `CodexPetLimitRings.app` into `/Applications`, writes the per-user LaunchAgent, and starts the menu-bar companion.
-
-### If macOS says “Not Opened”
-
-The current public `.pkg` is intentionally source-built but **not Apple Developer ID signed or notarized**. Because of that, macOS Gatekeeper can show:
+Do **not** expect this unsigned package to double-click install cleanly. macOS can show:
 
 ```text
 Apple could not verify “CodexPetLimitRings-0.4.0.pkg” is free of malware.
 ```
 
-This warning means macOS cannot verify an Apple Developer ID signature. It does **not** mean the package changed the Codex app bundle; this companion app still installs separately into `/Applications`.
+That warning means macOS cannot verify an Apple Developer ID Installer signature. It does **not** mean the companion patches Codex; the app still installs separately and leaves the Codex app bundle untouched.
 
-Install only if you trust this repository. Safe options are:
+Install the unsigned package only if you trust this repository:
 
 ```bash
 sudo installer -pkg ~/Downloads/CodexPetLimitRings-0.4.0.pkg -target /
 ```
 
-If the downloaded file is quarantined, remove only that download’s quarantine flag first:
+If macOS quarantine blocks that downloaded file, remove only that file’s quarantine flag first:
 
 ```bash
 xattr -d com.apple.quarantine ~/Downloads/CodexPetLimitRings-0.4.0.pkg
 sudo installer -pkg ~/Downloads/CodexPetLimitRings-0.4.0.pkg -target /
 ```
 
-You can also approve it from **System Settings → Privacy & Security → Open Anyway** after the first blocked open attempt.
+### Warning-free package builds
 
-For a warning-free public package, build with a real Apple **Developer ID Installer** certificate and notarization profile:
+A warning-free public `.pkg` requires a real Apple **Developer ID Installer** certificate and notarization profile. When those are present, build with:
 
 ```bash
 CODEX_PET_LIMIT_RINGS_PKG_SIGN_IDENTITY="Developer ID Installer: Your Name (TEAMID)" \
@@ -49,7 +59,7 @@ CODEX_PET_LIMIT_RINGS_NOTARY_PROFILE="your-notarytool-profile" \
 tools/build-limit-rings-pkg.sh
 ```
 
-The build script will sign, submit for notarization, and staple the ticket when those environment variables are present.
+The build script will sign, submit for notarization, and staple the ticket when those environment variables are present. Without that certificate, any public `.pkg` downloaded from GitHub will keep showing the same Gatekeeper warning.
 
 ## What’s New in 0.4.0
 
@@ -100,7 +110,7 @@ Build a shareable macOS installer package locally:
 tools/build-limit-rings-pkg.sh
 ```
 
-This writes `dist/CodexPetLimitRings-<version>.pkg`. Optional DMG packaging remains available via `tools/package-limit-rings-dmg.sh`, but the recommended distributable is the `.pkg` installer.
+This writes `dist/CodexPetLimitRings-<version>.pkg`. For public double-click distribution, sign and notarize that package first; unsigned packages are terminal-install artifacts only. Optional DMG packaging remains available via `tools/package-limit-rings-dmg.sh`.
 
 You should see a small rings icon in the macOS menu bar. Use that menu to toggle `Show Rings`, refresh the latest usage data, reset the locked position, or quit.
 
