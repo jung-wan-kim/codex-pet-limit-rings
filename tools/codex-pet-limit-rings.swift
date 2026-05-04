@@ -26,6 +26,9 @@ struct LimitState {
 private let limitStatePollInterval: TimeInterval = 20.0
 private let petFramePollInterval: TimeInterval = 0.12
 private let ringsVisibleDefaultsKey = "CodexPetLimitRings.ringsVisible"
+private let lockedPanelFrameDefaultsKey = "CodexPetLimitRings.lockedPanelFrame"
+private let ringPanelPadding: CGFloat = 38.0
+private let ringOverlayScale: CGFloat = 0.70
 private let liveUsageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
 
 private struct EventPayload: Decodable {
@@ -345,6 +348,7 @@ struct LimitRingRenderer {
             )
         }
 
+        drawCenterUsage(context, center: center, minSide: minSide)
         drawModelLimitDots(context, center: center, radius: outerRadius + 11.0, state: state)
         if showsReadout {
             drawLimitReadouts(context, center: center, outerRadius: outerRadius, innerRadius: innerRadius, bounds: rect)
@@ -599,6 +603,59 @@ struct LimitRingRenderer {
         context.restoreGState()
     }
 
+    private func drawCenterUsage(_ context: CGContext, center: CGPoint, minSide: CGFloat) {
+        guard state.primary != nil || state.secondary != nil else { return }
+
+        context.saveGState()
+        context.setShadow(
+            offset: .zero,
+            blur: 13.0,
+            color: NSColor(calibratedWhite: 0.0, alpha: 0.70).cgColor
+        )
+
+        if let primary = state.primary {
+            let color = color(forRemaining: primary.remainingPercent, role: .primary)
+            drawCenteredText(
+                "5h used",
+                center: CGPoint(x: center.x, y: center.y + minSide * 0.112),
+                font: NSFont.monospacedSystemFont(ofSize: max(6.5, minSide * 0.050), weight: .semibold),
+                color: color.withAlphaComponent(0.78)
+            )
+            drawCenteredText(
+                formatPercent(primary.usedPercent),
+                center: CGPoint(x: center.x, y: center.y + minSide * 0.015),
+                font: NSFont.monospacedSystemFont(ofSize: max(16.0, minSide * 0.170), weight: .heavy),
+                color: color
+            )
+        }
+
+        if let secondary = state.secondary {
+            let color = color(forRemaining: secondary.remainingPercent, role: .secondary)
+            drawCenteredText(
+                "Week \(formatPercent(secondary.usedPercent))",
+                center: CGPoint(x: center.x, y: center.y - minSide * 0.138),
+                font: NSFont.monospacedSystemFont(ofSize: max(8.0, minSide * 0.060), weight: .bold),
+                color: color.withAlphaComponent(0.92)
+            )
+        }
+
+        context.restoreGState()
+    }
+
+    private func drawCenteredText(_ text: String, center: CGPoint, font: NSFont, color: NSColor) {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color,
+            .paragraphStyle: paragraph,
+            .kern: -0.35
+        ]
+        let attributed = NSAttributedString(string: text, attributes: attrs)
+        let size = attributed.size()
+        attributed.draw(at: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2))
+    }
+
     private func drawModelLimitDots(_ context: CGContext, center: CGPoint, radius: CGFloat, state: LimitState) {
         let dots = Array(state.additional.prefix(8))
         guard dots.count > 0 else { return }
@@ -671,6 +728,7 @@ final class LimitRingsApp: NSObject {
     private var frameTimer: Timer?
     private var animationTimer: Timer?
     private var hoverTimer: Timer?
+    private var resetPositionItem: NSMenuItem?
     private var mouseDownMonitor: Any?
     private var mouseDragMonitor: Any?
     private var mouseUpMonitor: Any?
@@ -679,6 +737,7 @@ final class LimitRingsApp: NSObject {
     private var currentPetFrameAppKit: CGRect?
     private var dragCenterOffset: CGPoint?
     private var holdDraggedFrameUntil: Date?
+    private var lockedPanelFrame: CGRect?
     private var ringsVisible: Bool
     private var stateReadInFlight = false
 
@@ -688,6 +747,7 @@ final class LimitRingsApp: NSObject {
         self.frameReader = PetFrameReader(globalStatePath: config.globalStatePath)
         self.ringView = LimitRingView(frame: CGRect(origin: .zero, size: CGSize(width: config.fallbackSize, height: config.fallbackSize)))
         self.ringsVisible = UserDefaults.standard.object(forKey: ringsVisibleDefaultsKey) as? Bool ?? true
+        self.lockedPanelFrame = Self.loadLockedPanelFrame()
         self.panel = NSPanel(
             contentRect: CGRect(origin: .zero, size: CGSize(width: config.fallbackSize, height: config.fallbackSize)),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -750,6 +810,11 @@ final class LimitRingsApp: NSObject {
         }
         holdDraggedFrameUntil = nil
 
+        if let lockedPanelFrame {
+            applyLockedPanelFrame(lockedPanelFrame)
+            return
+        }
+
         guard let petFrame = frameReader.readPetFrameTopLeft() else {
             currentPetFrameAppKit = nil
             dragCenterOffset = nil
@@ -759,19 +824,56 @@ final class LimitRingsApp: NSObject {
         }
 
         currentPetFrameAppKit = appKitRectFromTopLeft(petFrame)
-        setPanelFrame(forPetFrameTopLeft: petFrame)
+        panel.setFrame(panelFrame(forPetFrameTopLeft: petFrame), display: true)
         if ringsVisible {
             panel.orderFrontRegardless()
         }
+        updateResetPositionMenuItem()
     }
 
-    private func setPanelFrame(forPetFrameTopLeft petFrame: CGRect) {
-        let padding: CGFloat = 38
-        let size = max(petFrame.width, petFrame.height) + padding * 2
+    private func panelFrame(forPetFrameTopLeft petFrame: CGRect) -> CGRect {
+        let size = (max(petFrame.width, petFrame.height) + ringPanelPadding * 2) * ringOverlayScale
         let topLeft = CGPoint(x: petFrame.midX - size / 2, y: petFrame.midY - size / 2)
         let origin = appKitOriginFromTopLeft(topLeft, size: CGSize(width: size, height: size))
 
-        panel.setFrame(CGRect(origin: origin, size: CGSize(width: size, height: size)), display: true)
+        return CGRect(origin: origin, size: CGSize(width: size, height: size))
+    }
+
+    private func applyLockedPanelFrame(_ frame: CGRect) {
+        panel.setFrame(frame, display: true)
+        currentPetFrameAppKit = inferredPetFrame(fromPanelFrame: frame)
+        if ringsVisible {
+            panel.orderFrontRegardless()
+        }
+        updateResetPositionMenuItem()
+    }
+
+    private func inferredPetFrame(fromPanelFrame frame: CGRect) -> CGRect {
+        let inset = min(ringPanelPadding * ringOverlayScale, max(0, min(frame.width, frame.height) / 2 - 1))
+        return frame.insetBy(dx: inset, dy: inset)
+    }
+
+    private static func loadLockedPanelFrame() -> CGRect? {
+        guard let raw = UserDefaults.standard.string(forKey: lockedPanelFrameDefaultsKey) else {
+            return nil
+        }
+        let frame = NSRectFromString(raw)
+        guard frame.width >= 40, frame.height >= 40 else {
+            return nil
+        }
+        return frame
+    }
+
+    private func saveLockedPanelFrame(_ frame: CGRect) {
+        lockedPanelFrame = frame
+        UserDefaults.standard.set(NSStringFromRect(frame), forKey: lockedPanelFrameDefaultsKey)
+        updateResetPositionMenuItem()
+    }
+
+    private func clearLockedPanelFrame() {
+        lockedPanelFrame = nil
+        UserDefaults.standard.removeObject(forKey: lockedPanelFrameDefaultsKey)
+        updateResetPositionMenuItem()
     }
 
     private func installStatusMenu() {
@@ -801,6 +903,11 @@ final class LimitRingsApp: NSObject {
         refreshItem.target = self
         menu.addItem(refreshItem)
 
+        let resetItem = NSMenuItem(title: "Reset Ring Position", action: #selector(resetRingPosition(_:)), keyEquivalent: "")
+        resetItem.target = self
+        menu.addItem(resetItem)
+        resetPositionItem = resetItem
+
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(title: "Quit Codex Pet Limit Rings", action: #selector(quit(_:)), keyEquivalent: "q")
@@ -810,6 +917,7 @@ final class LimitRingsApp: NSObject {
         item.menu = menu
         updateSummaryMenuItem()
         updateShowRingsMenuItem()
+        updateResetPositionMenuItem()
     }
 
     private func makeStatusBarIcon() -> NSImage {
@@ -864,6 +972,10 @@ final class LimitRingsApp: NSObject {
         showRingsItem?.state = ringsVisible ? .on : .off
     }
 
+    private func updateResetPositionMenuItem() {
+        resetPositionItem?.isEnabled = lockedPanelFrame != nil
+    }
+
     private func updateRingVisibility() {
         updateShowRingsMenuItem()
         if ringsVisible, currentPetFrameAppKit != nil {
@@ -887,6 +999,12 @@ final class LimitRingsApp: NSObject {
 
     @objc private func refreshNow(_ sender: NSMenuItem) {
         updateState()
+        updateFrame()
+        updateRingVisibility()
+    }
+
+    @objc private func resetRingPosition(_ sender: NSMenuItem) {
+        clearLockedPanelFrame()
         updateFrame()
         updateRingVisibility()
     }
@@ -934,17 +1052,18 @@ final class LimitRingsApp: NSObject {
         let size = panel.frame.size
         let center = CGPoint(x: mouse.x + offset.x, y: mouse.y + offset.y)
         let origin = CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2)
-        panel.setFrame(CGRect(origin: origin, size: size), display: true)
+        let newFrame = CGRect(origin: origin, size: size)
+        panel.setFrame(newFrame, display: true)
+        currentPetFrameAppKit = inferredPetFrame(fromPanelFrame: newFrame)
         ringView.showsReadout = false
     }
 
     private func endDragFollow() {
         guard dragCenterOffset != nil else { return }
         dragCenterOffset = nil
-        holdDraggedFrameUntil = Date().addingTimeInterval(1.25)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.30) { [weak self] in
-            self?.updateFrame()
-        }
+        holdDraggedFrameUntil = nil
+        saveLockedPanelFrame(panel.frame)
+        currentPetFrameAppKit = inferredPetFrame(fromPanelFrame: panel.frame)
     }
 
     private func updateTooltip(at mouse: CGPoint) {

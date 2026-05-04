@@ -9,6 +9,9 @@ The rings are pet-agnostic. They work with any pet Codex displays because the ap
 - A rings icon appears in the macOS menu bar.
 - `Show Rings` toggles the overlay without quitting the app.
 - `Refresh Now` rereads usage and pet-position state.
+- `Reset Ring Position` clears the saved manual ring position and returns to Codex pet tracking.
+- Dragging the pet/rings saves the new overlay position so stale Codex bounds do not snap the rings back.
+- The center of the rings always shows short-window usage as the large percentage and weekly usage as the smaller percentage.
 - Hovering over the ring or pet shows exact remaining percentages at the arc endpoints.
 - Dragging the pet makes the rings follow the gesture immediately while Codex persists the new position.
 - Closing the Codex pet hides the rings.
@@ -32,6 +35,8 @@ No OpenAI API key is required. The menu summary says `Live` when the direct usag
 - Outer ring: short-window remaining percentage.
 - Inner ring: weekly remaining percentage.
 - Ring colors are derived from remaining capacity: green/blue for healthy, amber for low, red for critical.
+- The overlay footprint is scaled to 70% of the original companion-ring size so it stays compact around the pet.
+- Center percentages use the matching ring colors: large text for short-window usage, smaller text for weekly usage.
 - Exact percentages are shown only on hover to keep the pet feeling ambient rather than dashboard-like.
 - Additional model-limit buckets may appear as small outer markers when available.
 

@@ -14,9 +14,12 @@ The rings are designed to be glanceable:
 
 - The outer ring shows the short-window limit remaining.
 - The inner ring shows the weekly limit remaining.
+- The overlay is intentionally compact, rendering at 70% of the original companion-ring footprint.
+- The center always shows the short-window usage percentage in large text, with the weekly usage percentage below it in smaller text.
 - Color moves from calm green/blue to amber and red as capacity gets low.
 - Hovering over the pet or rings shows the exact percentages at the current ring endpoints.
-- A small menu-bar icon lets you hide the rings, refresh data, or quit.
+- Dragging the pet/rings locks the rings at the new position so they do not snap back to stale Codex coordinates.
+- A small menu-bar icon lets you hide the rings, refresh data, reset the locked ring position, or quit.
 
 When the Codex pet is closed, the rings disappear. When the pet comes back, they come back too. On multi-display setups, the rings stay with the pet instead of jumping to whichever screen is focused.
 
