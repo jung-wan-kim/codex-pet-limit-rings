@@ -47,6 +47,32 @@ Alternative manual install:
 The app is a companion overlay and does not patch Codex.
 README
 
+
+if command -v osascript >/dev/null 2>&1; then
+  osascript <<APPLESCRIPT >/dev/null 2>&1 || true
+tell application "Finder"
+  set dmgFolder to POSIX file "$STAGE" as alias
+  open dmgFolder
+  set folderWindow to container window of dmgFolder
+  set current view of folderWindow to icon view
+  set toolbar visible of folderWindow to false
+  set statusbar visible of folderWindow to false
+  set bounds of folderWindow to {120, 120, 1040, 430}
+  set viewOptions to icon view options of folderWindow
+  set arrangement of viewOptions to not arranged
+  set icon size of viewOptions to 96
+  set text size of viewOptions to 14
+  set position of item "$APP_NAME" of dmgFolder to {180, 145}
+  set position of item "Applications" of dmgFolder to {440, 145}
+  set position of item "$PKG_NAME" of dmgFolder to {700, 145}
+  set position of item "README.txt" of dmgFolder to {900, 145}
+  update dmgFolder without registering applications
+  delay 0.2
+  close folderWindow
+end tell
+APPLESCRIPT
+fi
+
 rm -f "$DMG"
 hdiutil create \
   -volname "$VOLNAME" \
