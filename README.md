@@ -16,7 +16,9 @@ The rings are designed to be glanceable:
 - The inner ring fills by weekly usage percentage.
 - Both rings start at the 12 o'clock position and fill clockwise.
 - The overlay is intentionally compact, rendering at 70% of the original companion-ring footprint.
-- The center always shows the short-window usage percentage in large text, with the weekly usage percentage below it in smaller text.
+- The center shows the short-window percentage in large text, with the weekly percentage below it in smaller text.
+- Clicking the center toggles that display between usage and remaining-limit percentages.
+- Decorative borders, inactive track outlines, tick marks, and extra dots are omitted to keep the compact overlay clean.
 - Color moves from calm green/blue to amber and red as usage gets high.
 - Hovering over the pet or rings shows how long remains until each limit resets at the current ring endpoints.
 - Dragging the pet/rings locks the rings at the new position so they do not snap back to stale Codex coordinates.

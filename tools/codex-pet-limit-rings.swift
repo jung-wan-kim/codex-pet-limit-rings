@@ -27,10 +27,20 @@ private let limitStatePollInterval: TimeInterval = 20.0
 private let petFramePollInterval: TimeInterval = 0.12
 private let ringsVisibleDefaultsKey = "CodexPetLimitRings.ringsVisible"
 private let lockedPanelFrameDefaultsKey = "CodexPetLimitRings.lockedPanelFrame"
+private let centerDisplayModeDefaultsKey = "CodexPetLimitRings.centerDisplayMode"
 private let ringPanelPadding: CGFloat = 38.0
 private let ringOverlayScale: CGFloat = 0.70
 private let ringUsageStartAngle: CGFloat = CGFloat.pi / 2.0
 private let liveUsageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
+
+enum CenterDisplayMode: String {
+    case used
+    case remaining
+
+    var next: CenterDisplayMode {
+        self == .used ? .remaining : .used
+    }
+}
 
 private struct EventPayload: Decodable {
     var type: String
@@ -303,6 +313,7 @@ struct LimitRingRenderer {
     var state: LimitState
     var phase: Double
     var showsReadout: Bool = false
+    var centerDisplayMode: CenterDisplayMode = .used
 
     func draw(in rect: CGRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
@@ -318,9 +329,6 @@ struct LimitRingRenderer {
         let outerRadius = (minSide * 0.5 - 16.0) * pulse
         let innerRadius = outerRadius - 13.0
 
-        drawHalo(context, center: center, radius: outerRadius, urgency: CGFloat(urgency), breathe: breathe)
-        drawTicks(context, center: center, radius: outerRadius + 5.0)
-
         if let primary = state.primary {
             drawRing(
                 context,
@@ -328,9 +336,7 @@ struct LimitRingRenderer {
                 radius: outerRadius,
                 lineWidth: 7.0,
                 bucket: primary,
-                color: color(forUsage: primary.usedPercent, role: .primary),
-                trackAlpha: 0.16,
-                phase: phase
+                color: color(forUsage: primary.usedPercent, role: .primary)
             )
         } else {
             drawMissingRing(context, center: center, radius: outerRadius, lineWidth: 7.0)
@@ -343,14 +349,11 @@ struct LimitRingRenderer {
                 radius: innerRadius,
                 lineWidth: 4.5,
                 bucket: secondary,
-                color: color(forUsage: secondary.usedPercent, role: .secondary),
-                trackAlpha: 0.12,
-                phase: phase + 0.18
+                color: color(forUsage: secondary.usedPercent, role: .secondary)
             )
         }
 
         drawCenterUsage(context, center: center, minSide: minSide)
-        drawModelLimitDots(context, center: center, radius: outerRadius + 11.0, state: state)
         if showsReadout {
             drawLimitReadouts(context, center: center, outerRadius: outerRadius, innerRadius: innerRadius, bounds: rect)
         }
@@ -375,49 +378,13 @@ struct LimitRingRenderer {
         return min(max((bucket.usedPercent - 55.0) / 45.0, 0.0), 1.0)
     }
 
-    private func drawHalo(_ context: CGContext, center: CGPoint, radius: CGFloat, urgency: CGFloat, breathe: CGFloat) {
-        context.saveGState()
-        let color = NSColor(calibratedRed: 0.14 + urgency * 0.82, green: 0.82 - urgency * 0.42, blue: 0.95 - urgency * 0.68, alpha: 0.20 + urgency * 0.18)
-        context.setLineCap(.round)
-        context.setShadow(offset: .zero, blur: 14.0 + urgency * breathe * 5.0, color: color.withAlphaComponent(0.55).cgColor)
-        context.setStrokeColor(color.withAlphaComponent(0.18).cgColor)
-        context.setLineWidth(8.0)
-        context.addArc(center: center, radius: radius + 3.0, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
-        context.strokePath()
-        context.setShadow(offset: .zero, blur: 0.0, color: nil)
-        context.setStrokeColor(NSColor(calibratedWhite: 1.0, alpha: 0.045).cgColor)
-        context.setLineWidth(1.0)
-        context.addArc(center: center, radius: radius + 13.0, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
-        context.strokePath()
-        context.restoreGState()
-    }
-
-    private func drawTicks(_ context: CGContext, center: CGPoint, radius: CGFloat) {
-        context.saveGState()
-        context.setStrokeColor(NSColor(calibratedWhite: 1.0, alpha: 0.10).cgColor)
-        context.setLineWidth(1.2)
-        context.setLineCap(.round)
-        for i in 0..<24 {
-            guard i % 2 == 0 else { continue }
-            let angle = -CGFloat.pi / 2.0 + CGFloat(i) / 24.0 * CGFloat.pi * 2.0
-            let inner = radius - 1.5
-            let outer = radius + 2.5
-            context.move(to: point(center: center, radius: inner, angle: angle))
-            context.addLine(to: point(center: center, radius: outer, angle: angle))
-            context.strokePath()
-        }
-        context.restoreGState()
-    }
-
     private func drawRing(
         _ context: CGContext,
         center: CGPoint,
         radius: CGFloat,
         lineWidth: CGFloat,
         bucket: LimitBucket,
-        color: NSColor,
-        trackAlpha: CGFloat,
-        phase: Double
+        color: NSColor
     ) {
         let start = ringUsageStartAngle
         let usage = CGFloat(min(max(bucket.usedPercent, 0.0), 100.0) / 100.0)
@@ -427,13 +394,6 @@ struct LimitRingRenderer {
         context.saveGState()
         context.setLineCap(.round)
         context.setLineWidth(lineWidth)
-        context.setStrokeColor(NSColor(calibratedWhite: 0.0, alpha: 0.30).cgColor)
-        context.addArc(center: center, radius: radius + 1.0, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
-        context.strokePath()
-
-        context.setStrokeColor(NSColor(calibratedWhite: 1.0, alpha: trackAlpha).cgColor)
-        context.addArc(center: center, radius: radius, startAngle: 0, endAngle: CGFloat.pi * 2.0, clockwise: false)
-        context.strokePath()
 
         if visibleUsage > 0.0 {
             context.setShadow(offset: .zero, blur: 11.0, color: color.withAlphaComponent(0.46).cgColor)
@@ -447,18 +407,8 @@ struct LimitRingRenderer {
             context.setLineWidth(lineWidth)
             context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: true)
             context.strokePath()
-
-            let endpoint = point(center: center, radius: radius, angle: end)
-            context.setShadow(offset: .zero, blur: 6.0, color: color.withAlphaComponent(0.55).cgColor)
-            context.setFillColor(color.withAlphaComponent(0.96).cgColor)
-            context.fillEllipse(in: CGRect(x: endpoint.x - lineWidth * 0.43, y: endpoint.y - lineWidth * 0.43, width: lineWidth * 0.86, height: lineWidth * 0.86))
         }
 
-        let glintAngle = start - CGFloat(phase.truncatingRemainder(dividingBy: 1.0)) * CGFloat.pi * 2.0
-        let glint = point(center: center, radius: radius, angle: glintAngle)
-        context.setShadow(offset: .zero, blur: 0.0, color: nil)
-        context.setFillColor(NSColor(calibratedWhite: 1.0, alpha: 0.24).cgColor)
-        context.fillEllipse(in: CGRect(x: glint.x - 1.4, y: glint.y - 1.4, width: 2.8, height: 2.8))
         context.restoreGState()
     }
 
@@ -624,11 +574,6 @@ struct LimitRingRenderer {
         context.setFillColor(NSColor(calibratedWhite: 0.055, alpha: 0.78).cgColor)
         context.addPath(path)
         context.fillPath()
-        context.setShadow(offset: .zero, blur: 0.0, color: nil)
-        context.setStrokeColor(readout.color.withAlphaComponent(0.42).cgColor)
-        context.setLineWidth(1.0)
-        context.addPath(path)
-        context.strokePath()
 
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 11.5, weight: .semibold),
@@ -650,13 +595,13 @@ struct LimitRingRenderer {
         if let primary = state.primary {
             let color = color(forUsage: primary.usedPercent, role: .primary)
             drawCenteredText(
-                "5h used",
+                centerDisplayMode == .used ? "5h used" : "5h left",
                 center: CGPoint(x: center.x, y: center.y + minSide * 0.112),
                 font: NSFont.monospacedSystemFont(ofSize: max(6.5, minSide * 0.048), weight: .bold),
                 color: color.withAlphaComponent(0.86)
             )
             drawCenteredText(
-                formatPercent(primary.usedPercent),
+                formatPercent(centerValue(for: primary)),
                 center: CGPoint(x: center.x, y: center.y + minSide * 0.015),
                 font: NSFont.monospacedSystemFont(ofSize: max(16.0, minSide * 0.162), weight: .heavy),
                 color: color
@@ -666,9 +611,9 @@ struct LimitRingRenderer {
         if let secondary = state.secondary {
             let color = color(forUsage: secondary.usedPercent, role: .secondary)
             drawCenteredText(
-                "Week \(formatPercent(secondary.usedPercent))",
+                centerDisplayMode == .used ? "Wk used \(formatPercent(secondary.usedPercent))" : "Wk left \(formatPercent(secondary.remainingPercent))",
                 center: CGPoint(x: center.x, y: center.y - minSide * 0.138),
-                font: NSFont.monospacedSystemFont(ofSize: max(8.0, minSide * 0.060), weight: .bold),
+                font: NSFont.monospacedSystemFont(ofSize: max(7.2, minSide * 0.052), weight: .bold),
                 color: color.withAlphaComponent(0.92)
             )
         }
@@ -690,12 +635,11 @@ struct LimitRingRenderer {
         context.setFillColor(NSColor(calibratedWhite: 0.02, alpha: 0.40).cgColor)
         context.addPath(path)
         context.fillPath()
-        context.setShadow(offset: .zero, blur: 0.0, color: nil)
-        context.setStrokeColor(NSColor(calibratedWhite: 1.0, alpha: 0.08).cgColor)
-        context.setLineWidth(0.8)
-        context.addPath(path)
-        context.strokePath()
         context.restoreGState()
+    }
+
+    private func centerValue(for bucket: LimitBucket) -> Double {
+        centerDisplayMode == .used ? bucket.usedPercent : bucket.remainingPercent
     }
 
     private func drawCenteredText(_ text: String, center: CGPoint, font: NSFont, color: NSColor) {
@@ -710,21 +654,6 @@ struct LimitRingRenderer {
         let attributed = NSAttributedString(string: text, attributes: attrs)
         let size = attributed.size()
         attributed.draw(at: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2))
-    }
-
-    private func drawModelLimitDots(_ context: CGContext, center: CGPoint, radius: CGFloat, state: LimitState) {
-        let dots = Array(state.additional.prefix(8))
-        guard dots.count > 0 else { return }
-        context.saveGState()
-        for (index, item) in dots.enumerated() {
-            let angle = -CGFloat.pi / 2.0 + CGFloat(index) / CGFloat(max(dots.count, 1)) * CGFloat.pi * 2.0
-            let dot = point(center: center, radius: radius, angle: angle)
-            let color = color(forUsage: item.bucket.usedPercent, role: .primary)
-            context.setShadow(offset: .zero, blur: 5.0, color: color.withAlphaComponent(0.35).cgColor)
-            context.setFillColor(color.withAlphaComponent(0.82).cgColor)
-            context.fillEllipse(in: CGRect(x: dot.x - 2.4, y: dot.y - 2.4, width: 4.8, height: 4.8))
-        }
-        context.restoreGState()
     }
 
     private func color(forUsage usage: Double, role: RingRole) -> NSColor {
@@ -765,11 +694,19 @@ final class LimitRingView: NSView {
     var showsReadout: Bool = false {
         didSet { needsDisplay = true }
     }
+    var centerDisplayMode: CenterDisplayMode = .used {
+        didSet { needsDisplay = true }
+    }
 
     override var isOpaque: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {
-        LimitRingRenderer(state: state, phase: phase, showsReadout: showsReadout).draw(in: bounds)
+        LimitRingRenderer(
+            state: state,
+            phase: phase,
+            showsReadout: showsReadout,
+            centerDisplayMode: centerDisplayMode
+        ).draw(in: bounds)
     }
 }
 
@@ -792,11 +729,13 @@ final class LimitRingsApp: NSObject {
     private var mouseDragMonitor: Any?
     private var mouseUpMonitor: Any?
     private var mouseMoveMonitor: Any?
+    private var centerClickStart: CGPoint?
     private var startTime = Date()
     private var currentPetFrameAppKit: CGRect?
     private var dragCenterOffset: CGPoint?
     private var holdDraggedFrameUntil: Date?
     private var lockedPanelFrame: CGRect?
+    private var centerDisplayMode: CenterDisplayMode
     private var ringsVisible: Bool
     private var stateReadInFlight = false
 
@@ -807,6 +746,8 @@ final class LimitRingsApp: NSObject {
         self.ringView = LimitRingView(frame: CGRect(origin: .zero, size: CGSize(width: config.fallbackSize, height: config.fallbackSize)))
         self.ringsVisible = UserDefaults.standard.object(forKey: ringsVisibleDefaultsKey) as? Bool ?? true
         self.lockedPanelFrame = Self.loadLockedPanelFrame()
+        self.centerDisplayMode = Self.loadCenterDisplayMode()
+        self.ringView.centerDisplayMode = self.centerDisplayMode
         self.panel = NSPanel(
             contentRect: CGRect(origin: .zero, size: CGSize(width: config.fallbackSize, height: config.fallbackSize)),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -921,6 +862,21 @@ final class LimitRingsApp: NSObject {
             return nil
         }
         return frame
+    }
+
+    private static func loadCenterDisplayMode() -> CenterDisplayMode {
+        guard let raw = UserDefaults.standard.string(forKey: centerDisplayModeDefaultsKey),
+              let mode = CenterDisplayMode(rawValue: raw) else {
+            return .used
+        }
+        return mode
+    }
+
+    private func setCenterDisplayMode(_ mode: CenterDisplayMode) {
+        centerDisplayMode = mode
+        ringView.centerDisplayMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: centerDisplayModeDefaultsKey)
+        updateSummaryMenuItem()
     }
 
     private func saveLockedPanelFrame(_ frame: CGRect) {
@@ -1075,17 +1031,17 @@ final class LimitRingsApp: NSObject {
     private func installDragFollow() {
         mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] _ in
             DispatchQueue.main.async {
-                self?.beginDragFollowIfNeeded(at: NSEvent.mouseLocation)
+                self?.handleMouseDown(at: NSEvent.mouseLocation)
             }
         }
         mouseDragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged]) { [weak self] _ in
             DispatchQueue.main.async {
-                self?.continueDragFollow(at: NSEvent.mouseLocation)
+                self?.handleMouseDrag(at: NSEvent.mouseLocation)
             }
         }
         mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] _ in
             DispatchQueue.main.async {
-                self?.endDragFollow()
+                self?.handleMouseUp(at: NSEvent.mouseLocation)
             }
         }
         mouseMoveMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved]) { [weak self] _ in
@@ -1093,6 +1049,38 @@ final class LimitRingsApp: NSObject {
                 self?.updateTooltip(at: NSEvent.mouseLocation)
             }
         }
+    }
+
+    private func handleMouseDown(at mouse: CGPoint) {
+        guard ringsVisible else { return }
+        if isCenterToggleHit(mouse) {
+            centerClickStart = mouse
+            return
+        }
+        beginDragFollowIfNeeded(at: mouse)
+    }
+
+    private func handleMouseDrag(at mouse: CGPoint) {
+        if let start = centerClickStart {
+            if distanceSquared(mouse, to: start) > 36.0 {
+                centerClickStart = nil
+                beginDragFollowIfNeeded(at: mouse)
+            } else {
+                return
+            }
+        }
+        continueDragFollow(at: mouse)
+    }
+
+    private func handleMouseUp(at mouse: CGPoint) {
+        if centerClickStart != nil {
+            defer { centerClickStart = nil }
+            if isCenterToggleHit(mouse) {
+                setCenterDisplayMode(centerDisplayMode.next)
+            }
+            return
+        }
+        endDragFollow()
     }
 
     private func beginDragFollowIfNeeded(at mouse: CGPoint) {
@@ -1132,6 +1120,21 @@ final class LimitRingsApp: NSObject {
         }
 
         ringView.showsReadout = isHoveringRingOrPet(mouse)
+    }
+
+    private func isCenterToggleHit(_ mouse: CGPoint) -> Bool {
+        guard ringsVisible, currentPetFrameAppKit != nil else { return false }
+        let frame = panel.frame
+        guard frame.contains(mouse) else { return false }
+        let minSide = min(frame.width, frame.height)
+        let hitSize = CGSize(width: minSide * 0.64, height: minSide * 0.50)
+        let hitRect = CGRect(
+            x: frame.midX - hitSize.width / 2,
+            y: frame.midY - hitSize.height / 2 - minSide * 0.012,
+            width: hitSize.width,
+            height: hitSize.height
+        )
+        return hitRect.contains(mouse)
     }
 
     private func isHoveringRingOrPet(_ mouse: CGPoint) -> Bool {
@@ -1212,6 +1215,12 @@ final class LimitRingsApp: NSObject {
         let clampedY = min(max(point.y, rect.minY), rect.maxY)
         let dx = point.x - clampedX
         let dy = point.y - clampedY
+        return dx * dx + dy * dy
+    }
+
+    private func distanceSquared(_ lhs: CGPoint, to rhs: CGPoint) -> CGFloat {
+        let dx = lhs.x - rhs.x
+        let dy = lhs.y - rhs.y
         return dx * dx + dy * dy
     }
 

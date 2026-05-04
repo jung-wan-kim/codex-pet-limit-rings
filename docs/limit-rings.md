@@ -11,7 +11,8 @@ The rings are pet-agnostic. They work with any pet Codex displays because the ap
 - `Refresh Now` rereads usage and pet-position state.
 - `Reset Ring Position` clears the saved manual ring position and returns to Codex pet tracking.
 - Dragging the pet/rings saves the new overlay position so stale Codex bounds do not snap the rings back.
-- The center of the rings always shows short-window usage as the large percentage and weekly usage as the smaller percentage.
+- The center of the rings shows the short-window percentage as the large value and weekly percentage as the smaller value.
+- Clicking the center toggles that display between used percentage and remaining-limit percentage.
 - Hovering over the ring or pet shows how long remains until each limit resets at the arc endpoints.
 - Dragging the pet makes the rings follow the gesture immediately while Codex persists the new position.
 - Closing the Codex pet hides the rings.
@@ -38,9 +39,9 @@ No OpenAI API key is required. The menu summary says `Live` when the direct usag
 - Ring colors are derived from used capacity: green/blue for low usage, amber for high usage, red for critical usage.
 - The overlay footprint is scaled to 70% of the original companion-ring size so it stays compact around the pet.
 - Center percentages use the matching ring colors: large text for short-window usage, smaller text for weekly usage.
+- Stroke borders, inactive track outlines, tick marks, endpoint dots, and extra model-limit dots are omitted from the compact overlay.
 - Hover labels use reset countdowns such as `3h 04m` or `5d 12h` instead of duplicating usage percentages.
-- Exact percentages are shown only on hover to keep the pet feeling ambient rather than dashboard-like.
-- Additional model-limit buckets may appear as small outer markers when available.
+- Additional model-limit buckets are kept out of the compact overlay rather than shown as outer markers.
 
 ## Install Contract
 
