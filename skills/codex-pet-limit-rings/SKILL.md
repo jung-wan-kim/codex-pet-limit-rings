@@ -49,9 +49,10 @@ Install this skill into local Codex:
 tools/install-codex-skill.sh
 ```
 
-Build a shareable macOS DMG:
+Build a shareable macOS installer package and DMG:
 
 ```bash
+tools/build-limit-rings-pkg.sh
 tools/package-limit-rings-dmg.sh
 ```
 
@@ -85,6 +86,7 @@ bash -n tools/*.sh
 swiftc tools/codex-pet-limit-rings.swift -o tmp/codex-pet-limit-rings -framework AppKit -lsqlite3
 tmp/codex-pet-limit-rings --preview tmp/limit-rings-preview.png --size 164
 tools/build-limit-rings.sh tmp/CodexPetLimitRings.app
+tools/build-limit-rings-pkg.sh
 tools/package-limit-rings-dmg.sh
 ```
 
@@ -92,4 +94,4 @@ tools/package-limit-rings-dmg.sh
 
 ## Open-Source Hygiene
 
-Keep the app privacy-preserving, source-buildable, and uninstallable. Do not commit local `tmp/` builds, logs, derived pet spritesheets, or user-specific Codex data. Preserve the MIT license and document any new local files or permissions in `docs/limit-rings.md`.
+Keep the app privacy-preserving, source-buildable, installer-packageable, and uninstallable. Do not commit local `tmp/` builds, `dist/` DMGs/PKGs, logs, derived pet spritesheets, or user-specific Codex data. Preserve the MIT license and document any new local files or permissions in `docs/limit-rings.md`.
