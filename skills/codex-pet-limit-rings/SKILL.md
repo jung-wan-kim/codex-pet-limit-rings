@@ -64,7 +64,7 @@ The rings read:
 - `~/.codex/.codex-global-state.json` for `electron-avatar-overlay-open` and `electron-avatar-overlay-bounds.mascot`.
 - `~/.codex/logs_2.sqlite` for fallback to the newest `codex.rate_limits` event when live usage fails.
 
-The outer ring is the short-window usage percentage. The inner ring is the weekly usage percentage. Both rings start at 12 o'clock and fill clockwise. Clicking the center toggles the center label between usage and remaining-limit percentages. Decorative borders, inactive track outlines, and extra dots stay hidden. Hover readouts show separated `5h` and `Weekly` reset countdowns together below the center label, colored to match their rings, not usage percentages. The menu summary should say `Live` when direct usage succeeds and `Cached` when the local log fallback is active.
+The outer ring is the short-window usage percentage. The inner ring is the weekly usage percentage. Both rings start at 12 o'clock and fill clockwise. Clicking the center toggles the center label between usage and remaining-limit percentages. Decorative borders, inactive track outlines, and extra dots stay hidden. Hover readouts show unprefixed reset countdowns together below the center label, with the 5h value above the weekly value and colors matching their rings, not usage percentages. The menu summary should say `Live` when direct usage succeeds and `Cached` when the local log fallback is active.
 
 ## Editing Workflow
 

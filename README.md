@@ -20,7 +20,7 @@ The rings are designed to be glanceable:
 - Clicking the center toggles that display between usage and remaining-limit percentages.
 - Decorative borders, inactive track outlines, tick marks, and extra dots are omitted to keep the compact overlay clean.
 - Color moves from calm green/blue to amber and red as usage gets high.
-- Hovering over the pet or rings shows separated `5h` and `Weekly` reset countdowns together below the center, colored to match their rings.
+- Hovering over the pet or rings shows two reset countdowns together below the center, with the 5h value above the weekly value and colors matching their rings.
 - Dragging the pet/rings locks the rings at the new position so they do not snap back to stale Codex coordinates.
 - A small menu-bar icon lets you hide the rings, refresh data, reset the locked ring position, or quit.
 

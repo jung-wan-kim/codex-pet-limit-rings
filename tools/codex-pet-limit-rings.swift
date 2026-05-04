@@ -428,7 +428,7 @@ struct LimitRingRenderer {
     private func drawLimitReadouts(_ context: CGContext, center: CGPoint, bounds: CGRect) {
         if let primary = state.primary {
             drawReadout(context, readout: makeReadout(
-                text: "5h \(formatResetCountdown(primary))",
+                text: formatResetCountdown(primary),
                 center: center,
                 color: color(forUsage: primary.usedPercent, role: .primary),
                 slot: .lowerTop,
@@ -438,7 +438,7 @@ struct LimitRingRenderer {
 
         if let secondary = state.secondary {
             drawReadout(context, readout: makeReadout(
-                text: "Weekly \(formatResetCountdown(secondary))",
+                text: formatResetCountdown(secondary),
                 center: center,
                 color: color(forUsage: secondary.usedPercent, role: .secondary),
                 slot: .lowerBottom,
@@ -457,7 +457,7 @@ struct LimitRingRenderer {
         let inset: CGFloat = 4.0
         let labelGap: CGFloat = 3.0
         let labelHeight = max(16.0, min(18.5, bounds.height * 0.13))
-        let labelWidth = min(bounds.width - inset * 2.0, max(58.0, CGFloat(text.count) * 5.9 + 14.0))
+        let labelWidth = min(bounds.width - inset * 2.0, max(48.0, CGFloat(text.count) * 5.9 + 14.0))
         let labelY: CGFloat
         switch slot {
         case .lowerTop:
