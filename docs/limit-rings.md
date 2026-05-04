@@ -34,6 +34,7 @@ No OpenAI API key is required. The menu summary says `Live` when the direct usag
 
 - Outer ring: short-window usage percentage.
 - Inner ring: weekly usage percentage.
+- Both usage arcs start at 12 o'clock and fill clockwise.
 - Ring colors are derived from used capacity: green/blue for low usage, amber for high usage, red for critical usage.
 - The overlay footprint is scaled to 70% of the original companion-ring size so it stays compact around the pet.
 - Center percentages use the matching ring colors: large text for short-window usage, smaller text for weekly usage.

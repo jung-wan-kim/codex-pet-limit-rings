@@ -29,6 +29,7 @@ private let ringsVisibleDefaultsKey = "CodexPetLimitRings.ringsVisible"
 private let lockedPanelFrameDefaultsKey = "CodexPetLimitRings.lockedPanelFrame"
 private let ringPanelPadding: CGFloat = 38.0
 private let ringOverlayScale: CGFloat = 0.70
+private let ringUsageStartAngle: CGFloat = CGFloat.pi / 2.0
 private let liveUsageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
 
 private struct EventPayload: Decodable {
@@ -418,10 +419,10 @@ struct LimitRingRenderer {
         trackAlpha: CGFloat,
         phase: Double
     ) {
-        let start = -CGFloat.pi / 2.0
+        let start = ringUsageStartAngle
         let usage = CGFloat(min(max(bucket.usedPercent, 0.0), 100.0) / 100.0)
         let visibleUsage = bucket.usedPercent <= 0.0 ? 0.0 : max(usage, 0.018)
-        let end = start + visibleUsage * CGFloat.pi * 2.0
+        let end = start - visibleUsage * CGFloat.pi * 2.0
 
         context.saveGState()
         context.setLineCap(.round)
@@ -438,13 +439,13 @@ struct LimitRingRenderer {
             context.setShadow(offset: .zero, blur: 11.0, color: color.withAlphaComponent(0.46).cgColor)
             context.setStrokeColor(color.withAlphaComponent(0.24).cgColor)
             context.setLineWidth(lineWidth + 7.0)
-            context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
+            context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: true)
             context.strokePath()
 
             context.setShadow(offset: .zero, blur: 4.0, color: color.withAlphaComponent(0.56).cgColor)
             context.setStrokeColor(color.cgColor)
             context.setLineWidth(lineWidth)
-            context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: false)
+            context.addArc(center: center, radius: radius, startAngle: start, endAngle: end, clockwise: true)
             context.strokePath()
 
             let endpoint = point(center: center, radius: radius, angle: end)
@@ -453,7 +454,7 @@ struct LimitRingRenderer {
             context.fillEllipse(in: CGRect(x: endpoint.x - lineWidth * 0.43, y: endpoint.y - lineWidth * 0.43, width: lineWidth * 0.86, height: lineWidth * 0.86))
         }
 
-        let glintAngle = start + CGFloat(phase.truncatingRemainder(dividingBy: 1.0)) * CGFloat.pi * 2.0
+        let glintAngle = start - CGFloat(phase.truncatingRemainder(dividingBy: 1.0)) * CGFloat.pi * 2.0
         let glint = point(center: center, radius: radius, angle: glintAngle)
         context.setShadow(offset: .zero, blur: 0.0, color: nil)
         context.setFillColor(NSColor(calibratedWhite: 1.0, alpha: 0.24).cgColor)
@@ -511,7 +512,7 @@ struct LimitRingRenderer {
         color: NSColor,
         bounds: CGRect
     ) -> LimitReadout {
-        let angle = -CGFloat.pi / 2.0 + CGFloat(max(usagePercent, 1.8) / 100.0) * CGFloat.pi * 2.0
+        let angle = ringUsageStartAngle - CGFloat(max(usagePercent, 1.8) / 100.0) * CGFloat.pi * 2.0
         let ringPoint = point(center: center, radius: ringRadius, angle: angle)
         let labelPoint = point(center: center, radius: labelRadius, angle: angle)
         let labelSize = CGSize(width: text.count > 3 ? 45 : 38, height: 22)

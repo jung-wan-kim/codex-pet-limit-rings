@@ -14,6 +14,7 @@ The rings are designed to be glanceable:
 
 - The outer ring fills by short-window usage percentage.
 - The inner ring fills by weekly usage percentage.
+- Both rings start at the 12 o'clock position and fill clockwise.
 - The overlay is intentionally compact, rendering at 70% of the original companion-ring footprint.
 - The center always shows the short-window usage percentage in large text, with the weekly usage percentage below it in smaller text.
 - Color moves from calm green/blue to amber and red as usage gets high.
